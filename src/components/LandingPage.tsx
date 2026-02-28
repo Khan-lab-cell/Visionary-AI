@@ -328,7 +328,7 @@ const CreatorHighlight = () => {
             <div className="relative">
               <div className="aspect-square max-w-md mx-auto rounded-3xl overflow-hidden border border-slate-200 shadow-xl glow-secondary">
                 <img
-                  src="https://picsum.photos/seed/mohsin/600/600"
+                  src="/images/creator.PNG"
                   alt="Mohsin Sultan"
                   className="w-full h-full object-cover"
                   referrerPolicy="no-referrer"
