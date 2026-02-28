@@ -337,7 +337,7 @@ const CreatorHighlight = () => {
               <div className="absolute -bottom-6 -right-6 glass-card p-6 border-slate-200 shadow-lg">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-full bg-brand-primary/10 flex items-center justify-center">
-                    <Facebook className="w-6 h-6 text-brand-primary fill-current" />
+                    <Twitter className="w-6 h-6 text-brand-primary fill-current" />
                   </div>
                   <div>
                     <div className="font-bold text-slate-900">@MalikMohsin</div>
