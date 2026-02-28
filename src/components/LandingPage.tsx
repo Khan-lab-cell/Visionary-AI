@@ -438,7 +438,7 @@ const Pricing = () => {
       name: "Starter",
       price: "Free",
       desc: "Perfect for testing the waters.",
-      features: ["1 Credit", "720p Export", "Standard Queue", "Community Support"],
+      features: ["10 Credit", "720p Export", "Standard Queue", "Community Support"],
       cta: "Start for Free",
       highlight: false
     },
