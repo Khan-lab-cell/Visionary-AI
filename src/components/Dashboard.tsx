@@ -82,8 +82,8 @@ export const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#030014] flex items-center justify-center">
-        <div className="w-12 h-12 border-4 border-brand-purple border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-brand-primary border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -92,46 +92,46 @@ export const Dashboard = () => {
     { 
       label: 'Plan', 
       value: subscription?.plans?.name || 'No Plan', 
-      icon: <Zap className="w-5 h-5 text-brand-purple" />,
+      icon: <Zap className="w-5 h-5 text-brand-primary" />,
       clickable: true,
       onClick: () => setCurrentView('plans')
     },
     { 
       label: 'Credits', 
       value: `${subscription?.credits_remaining || 0} Left`, 
-      icon: <Sparkles className="w-5 h-5 text-brand-blue" /> 
+      icon: <Sparkles className="w-5 h-5 text-brand-secondary" /> 
     },
     { 
       label: 'Projects', 
       value: projects.length.toString(), 
-      icon: <History className="w-5 h-5 text-emerald-400" /> 
+      icon: <History className="w-5 h-5 text-emerald-500" /> 
     },
   ];
 
   const actions = [
-    { id: 'video', label: 'Generate Video', icon: <Video className="w-8 h-8" />, color: 'from-brand-purple to-brand-blue' },
-    { id: 'image', label: 'Generate Image', icon: <ImageIcon className="w-8 h-8" />, color: 'from-brand-blue to-emerald-400' },
-    { id: 'history', label: 'Projects History', icon: <History className="w-8 h-8" />, color: 'from-brand-purple/50 to-brand-blue/50' },
+    { id: 'video', label: 'Generate Video', icon: <Video className="w-8 h-8" />, color: 'from-brand-primary to-brand-secondary' },
+    { id: 'image', label: 'Generate Image', icon: <ImageIcon className="w-8 h-8" />, color: 'from-brand-secondary to-emerald-400' },
+    { id: 'history', label: 'Projects History', icon: <History className="w-8 h-8" />, color: 'from-brand-primary/50 to-brand-secondary/50' },
   ];
 
   const renderMainView = () => (
     <>
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Welcome back, {profile?.full_name || user?.email?.split('@')[0]}!</h1>
-          <p className="text-slate-400">What will you create today?</p>
+          <h1 className="text-3xl font-bold text-slate-900 mb-2">Welcome back, {profile?.full_name || user?.email?.split('@')[0]}!</h1>
+          <p className="text-slate-600">What will you create today?</p>
         </div>
         <div className="flex items-center gap-4">
           <div className="relative hidden sm:block">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
               type="text"
               placeholder="Search projects..."
-              className="bg-white/5 border border-white/10 rounded-full py-2 pl-10 pr-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-purple/50 w-64"
+              className="bg-slate-50 border border-slate-200 rounded-full py-2 pl-10 pr-4 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-primary/50 w-64"
             />
           </div>
-          <div className="w-10 h-10 rounded-full bg-brand-purple/20 border border-brand-purple/30 flex items-center justify-center">
-            <User className="w-5 h-5 text-brand-purple" />
+          <div className="w-10 h-10 rounded-full bg-brand-primary/10 border border-brand-primary/20 flex items-center justify-center">
+            <User className="w-5 h-5 text-brand-primary" />
           </div>
         </div>
       </header>
@@ -145,15 +145,15 @@ export const Dashboard = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.1 }}
             onClick={stat.clickable ? stat.onClick : undefined}
-            className={`glass-card p-6 border-white/10 ${stat.clickable ? 'cursor-pointer hover:border-brand-purple/50 transition-colors' : ''}`}
+            className={`glass-card p-6 border-slate-200 ${stat.clickable ? 'cursor-pointer hover:border-brand-primary/50 transition-colors' : ''}`}
           >
             <div className="flex items-center gap-4 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center">
                 {stat.icon}
               </div>
-              <span className="text-sm text-slate-400">{stat.label}</span>
+              <span className="text-sm text-slate-500">{stat.label}</span>
             </div>
-            <div className="text-2xl font-bold text-white">{stat.value}</div>
+            <div className="text-2xl font-bold text-slate-900">{stat.value}</div>
           </motion.div>
         ))}
       </div>
@@ -179,7 +179,7 @@ export const Dashboard = () => {
               </div>
               <div>
                 <h3 className="text-xl font-bold text-white mb-1">{action.label}</h3>
-                <p className="text-sm text-slate-300 opacity-80">Start a new project</p>
+                <p className="text-sm text-white/80 opacity-80">Start a new project</p>
               </div>
               <Plus className="absolute top-8 right-8 w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
@@ -190,17 +190,17 @@ export const Dashboard = () => {
       {/* Recent Projects Placeholder */}
       <section>
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-white">Recent Projects</h2>
+          <h2 className="text-xl font-bold text-slate-900">Recent Projects</h2>
           <button 
             onClick={() => setCurrentView('history')}
-            className="text-sm text-brand-purple font-bold hover:underline"
+            className="text-sm text-brand-primary font-bold hover:underline"
           >
             View All
           </button>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {projects.length > 0 ? projects.slice(0, 4).map((project) => (
-            <div key={project.id} className="glass-card overflow-hidden border-white/10 group cursor-pointer">
+            <div key={project.id} className="glass-card overflow-hidden border-slate-200 group cursor-pointer shadow-sm">
               <div className="aspect-video relative">
                 <img
                   src={project.thumbnail_url || project.url}
@@ -208,12 +208,12 @@ export const Dashboard = () => {
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                   referrerPolicy="no-referrer"
                 />
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                   <ArrowRight className="w-8 h-8 text-white" />
                 </div>
               </div>
               <div className="p-4">
-                <h4 className="font-bold text-white text-sm mb-1 truncate">{project.prompt || 'Untitled Project'}</h4>
+                <h4 className="font-bold text-slate-900 text-sm mb-1 truncate">{project.prompt || 'Untitled Project'}</h4>
                 <div className="flex items-center gap-2 text-[10px] text-slate-500">
                   <Clock className="w-3 h-3" />
                   Expires in {Math.round((new Date(project.expires_at).getTime() - Date.now()) / 60000)}m
@@ -221,7 +221,7 @@ export const Dashboard = () => {
               </div>
             </div>
           )) : (
-            <div className="col-span-full py-12 text-center glass-card border-dashed border-white/10">
+            <div className="col-span-full py-12 text-center glass-card border-dashed border-slate-200">
               <p className="text-slate-500">No active projects. Start generating to see them here!</p>
             </div>
           )}
@@ -263,8 +263,8 @@ export const Dashboard = () => {
   const renderPlansView = () => (
     <div className="max-w-5xl mx-auto py-12">
       <div className="text-center mb-16">
-        <h1 className="text-4xl font-bold text-white mb-4">Subscription Plans</h1>
-        <p className="text-slate-400">Choose the best plan for your creative journey</p>
+        <h1 className="text-4xl font-bold text-slate-900 mb-4">Subscription Plans</h1>
+        <p className="text-slate-600">Choose the best plan for your creative journey</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -292,15 +292,15 @@ export const Dashboard = () => {
             isFree: false
           }
         ].map((plan) => (
-          <div key={plan.name} className={`glass-card p-8 flex flex-col border-white/10 ${plan.name === subscription?.plans?.name ? 'border-brand-purple ring-1 ring-brand-purple' : ''}`}>
+          <div key={plan.name} className={`glass-card p-8 flex flex-col border-slate-200 shadow-sm ${plan.name === subscription?.plans?.name ? 'border-brand-primary ring-1 ring-brand-primary' : ''}`}>
             <div className="mb-8">
-              <h3 className="text-2xl font-bold text-white mb-2">{plan.name}</h3>
-              <div className="text-3xl font-extrabold text-white mb-4">
+              <h3 className="text-2xl font-bold text-slate-900 mb-2">{plan.name}</h3>
+              <div className="text-3xl font-extrabold text-slate-900 mb-4">
                 {plan.currency && <span className="text-lg mr-1">{plan.currency}</span>}
                 {plan.price}
-                {plan.price !== 'Custom' && plan.price !== '0' && <span className="text-sm text-slate-400 font-normal">/mo</span>}
+                {plan.price !== 'Custom' && plan.price !== '0' && <span className="text-sm text-slate-500 font-normal">/mo</span>}
               </div>
-              <div className="flex items-center gap-2 text-brand-purple font-bold text-sm">
+              <div className="flex items-center gap-2 text-brand-primary font-bold text-sm">
                 <Zap className="w-4 h-4" />
                 {plan.credits}
               </div>
@@ -308,8 +308,8 @@ export const Dashboard = () => {
             
             <ul className="space-y-4 mb-10 flex-grow">
               {plan.features.map((f, i) => (
-                <li key={i} className="flex items-center gap-3 text-slate-400 text-sm">
-                  <Plus className="w-4 h-4 text-emerald-400" />
+                <li key={i} className="flex items-center gap-3 text-slate-600 text-sm">
+                  <Plus className="w-4 h-4 text-brand-secondary" />
                   {f}
                 </li>
               ))}
@@ -319,7 +319,7 @@ export const Dashboard = () => {
               <button 
                 onClick={activateFreePlan}
                 disabled={subscription?.plans?.name === 'Free'}
-                className="w-full py-4 rounded-xl font-bold bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all disabled:opacity-50"
+                className="w-full py-4 rounded-xl font-bold bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100 transition-all disabled:opacity-50"
               >
                 {subscription?.plans?.name === 'Free' ? 'Currently Active' : 'Activate Free Plan'}
               </button>
@@ -328,7 +328,7 @@ export const Dashboard = () => {
                 href="https://wa.me/923429907507"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full py-4 rounded-xl font-bold bg-brand-purple text-white text-center hover:opacity-90 transition-all shadow-lg shadow-brand-purple/20"
+                className="w-full py-4 rounded-xl font-bold bg-brand-primary text-white text-center hover:opacity-90 transition-all shadow-lg shadow-brand-primary/20"
               >
                 Contact on WhatsApp
               </a>
@@ -340,7 +340,7 @@ export const Dashboard = () => {
       <div className="mt-12 text-center">
         <button 
           onClick={() => setCurrentView('main')}
-          className="text-slate-400 hover:text-white transition-colors"
+          className="text-slate-500 hover:text-brand-primary transition-colors font-medium"
         >
           Back to Dashboard
         </button>
@@ -351,8 +351,8 @@ export const Dashboard = () => {
   const renderVideoSelect = () => (
     <div className="max-w-4xl mx-auto py-12">
       <div className="text-center mb-12">
-        <h1 className="text-4xl font-bold text-white mb-4">Choose Generation Mode</h1>
-        <p className="text-slate-400">Select how you want to create your AI video</p>
+        <h1 className="text-4xl font-bold text-slate-900 mb-4">Choose Generation Mode</h1>
+        <p className="text-slate-600">Select how you want to create your AI video</p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {[
@@ -360,17 +360,17 @@ export const Dashboard = () => {
             id: 'text-to-video',
             title: 'Text to Video',
             description: 'Generate high-quality cinematic videos from just a text description.',
-            icon: <Type className="w-12 h-12 text-brand-purple" />,
-            color: 'from-brand-purple/20 to-brand-blue/20',
-            borderColor: 'border-brand-purple/30'
+            icon: <Type className="w-12 h-12 text-brand-primary" />,
+            color: 'from-brand-primary/10 to-brand-secondary/10',
+            borderColor: 'border-brand-primary/20'
           },
           {
             id: 'image-to-video',
             title: 'Image to Video',
             description: 'Animate your static images into stunning dynamic video sequences.',
-            icon: <ImageIcon className="w-12 h-12 text-brand-blue" />,
-            color: 'from-brand-blue/20 to-emerald-400/20',
-            borderColor: 'border-brand-blue/30'
+            icon: <ImageIcon className="w-12 h-12 text-brand-secondary" />,
+            color: 'from-brand-secondary/10 to-emerald-400/10',
+            borderColor: 'border-brand-secondary/20'
           }
         ].map((mode) => (
           <motion.button
@@ -381,14 +381,14 @@ export const Dashboard = () => {
               setVideoSubType(mode.id as any);
               setCurrentView('video-gen');
             }}
-            className={`glass-card p-10 text-left border-2 ${mode.borderColor} hover:bg-white/5 transition-all group relative overflow-hidden`}
+            className={`glass-card p-10 text-left border-2 ${mode.borderColor} hover:bg-slate-50 transition-all group relative overflow-hidden shadow-sm`}
           >
             <div className={`absolute inset-0 bg-gradient-to-br ${mode.color} opacity-0 group-hover:opacity-100 transition-opacity`} />
             <div className="relative z-10">
               <div className="mb-6">{mode.icon}</div>
-              <h3 className="text-2xl font-bold text-white mb-3">{mode.title}</h3>
-              <p className="text-slate-400 mb-8 leading-relaxed">{mode.description}</p>
-              <div className="flex items-center gap-2 text-white font-bold group-hover:text-brand-purple transition-colors">
+              <h3 className="text-2xl font-bold text-slate-900 mb-3">{mode.title}</h3>
+              <p className="text-slate-600 mb-8 leading-relaxed">{mode.description}</p>
+              <div className="flex items-center gap-2 text-slate-700 font-bold group-hover:text-brand-primary transition-colors">
                 Get Started <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
               </div>
             </div>
@@ -398,7 +398,7 @@ export const Dashboard = () => {
       <div className="mt-12 text-center">
         <button 
           onClick={() => setCurrentView('main')}
-          className="text-slate-400 hover:text-white transition-colors"
+          className="text-slate-500 hover:text-brand-primary transition-colors font-medium"
         >
           Cancel and go back
         </button>
@@ -407,14 +407,14 @@ export const Dashboard = () => {
   );
 
   return (
-    <div className="min-h-screen bg-[#030014] flex">
+    <div className="min-h-screen bg-white flex">
       {/* Sidebar */}
-      <aside className="w-64 border-r border-white/10 hidden lg:flex flex-col p-6">
+      <aside className="w-64 border-r border-slate-200 hidden lg:flex flex-col p-6 bg-slate-50/50">
         <div className="flex items-center gap-2 mb-12 cursor-pointer" onClick={() => setCurrentView('main')}>
-          <div className="w-8 h-8 bg-gradient-to-br from-brand-purple to-brand-blue rounded-lg flex items-center justify-center">
+          <div className="w-8 h-8 bg-gradient-to-br from-brand-primary to-brand-secondary rounded-lg flex items-center justify-center shadow-lg shadow-brand-primary/20">
             <Zap className="text-white w-5 h-5 fill-current" />
           </div>
-          <span className="text-lg font-bold tracking-tighter text-white uppercase">Visionary AI</span>
+          <span className="text-lg font-bold tracking-tighter text-slate-900 uppercase">Visionary AI</span>
         </div>
 
         <nav className="space-y-2 flex-grow">
@@ -430,7 +430,7 @@ export const Dashboard = () => {
               key={item.id}
               onClick={() => setCurrentView(item.id as any)}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
-                currentView === item.id ? 'bg-white/10 text-white' : 'text-slate-400 hover:text-white hover:bg-white/5'
+                currentView === item.id ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'text-slate-600 hover:text-brand-primary hover:bg-slate-100'
               }`}
             >
               {item.icon}
@@ -442,7 +442,7 @@ export const Dashboard = () => {
             <button
               onClick={() => setCurrentView('admin')}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
-                currentView === 'admin' ? 'bg-brand-purple/20 text-brand-purple border border-brand-purple/30' : 'text-slate-400 hover:text-white hover:bg-white/5'
+                currentView === 'admin' ? 'bg-brand-secondary/20 text-brand-secondary border border-brand-secondary/30' : 'text-slate-600 hover:text-brand-secondary hover:bg-slate-100'
               }`}
             >
               <ShieldCheck className="w-5 h-5" />
@@ -453,7 +453,7 @@ export const Dashboard = () => {
 
         <button
           onClick={handleLogout}
-          className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-400 hover:bg-red-500/10 transition-all"
+          className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-500 hover:bg-red-50 transition-all"
         >
           <LogOut className="w-5 h-5" />
           Sign Out
@@ -461,7 +461,7 @@ export const Dashboard = () => {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-grow p-6 lg:p-12 overflow-y-auto">
+      <main className="flex-grow p-6 lg:p-12 overflow-y-auto bg-white">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentView}
@@ -493,24 +493,24 @@ export const Dashboard = () => {
               <div className="max-w-4xl mx-auto">
                 <button 
                   onClick={() => setCurrentView('main')}
-                  className="flex items-center gap-2 text-slate-400 hover:text-white mb-8 transition-colors"
+                  className="flex items-center gap-2 text-slate-500 hover:text-brand-primary mb-8 transition-colors font-medium"
                 >
                   <ArrowRight className="w-4 h-4 rotate-180" />
                   Back to Dashboard
                 </button>
-                <h1 className="text-3xl font-bold text-white mb-8">Projects History</h1>
+                <h1 className="text-3xl font-bold text-slate-900 mb-8">Projects History</h1>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {projects.length > 0 ? projects.map((project) => (
-                    <div key={project.id} className="glass-card p-4 border-white/10 flex gap-4">
-                      <div className="w-32 aspect-video rounded-lg overflow-hidden bg-white/5">
+                    <div key={project.id} className="glass-card p-4 border-slate-200 flex gap-4 shadow-sm">
+                      <div className="w-32 aspect-video rounded-lg overflow-hidden bg-slate-100">
                         <img src={project.thumbnail_url || project.url} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                       </div>
                       <div className="flex flex-col justify-center">
-                        <h4 className="text-white font-bold truncate w-32">{project.prompt || 'Untitled'}</h4>
+                        <h4 className="text-slate-900 font-bold truncate w-32">{project.prompt || 'Untitled'}</h4>
                         <p className="text-slate-500 text-sm">Generated {new Date(project.created_at).toLocaleDateString()}</p>
                         <div className="mt-2 flex gap-2">
-                          <span className="px-2 py-0.5 bg-brand-purple/20 text-brand-purple text-[10px] font-bold rounded uppercase">{project.type}</span>
-                          <span className="px-2 py-0.5 bg-white/5 text-slate-400 text-[10px] font-bold rounded uppercase">
+                          <span className="px-2 py-0.5 bg-brand-primary/10 text-brand-primary text-[10px] font-bold rounded uppercase">{project.type}</span>
+                          <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-[10px] font-bold rounded uppercase">
                             {Math.round((new Date(project.expires_at).getTime() - Date.now()) / 60000)}m left
                           </span>
                         </div>
