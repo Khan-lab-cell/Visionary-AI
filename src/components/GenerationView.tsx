@@ -26,6 +26,7 @@ interface GenerationViewProps {
 
 export const GenerationView: React.FC<GenerationViewProps> = ({ type, subType, onBack }) => {
   const [prompt, setPrompt] = useState('');
+  const [subscription, setSubscription] = useState<any>(null);
   const [model, setModel] = useState('visionary-v2-turbo');
   const [duration, setDuration] = useState('5s');
   const [resolution, setResolution] = useState('1080p');
@@ -36,6 +37,27 @@ export const GenerationView: React.FC<GenerationViewProps> = ({ type, subType, o
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
 
   const creditCost = type === 'video' ? 5 : 1;
+  const isFreePlan = subscription?.plans?.name === 'Free';
+  const fixedPrompt = "a beautiful cat walking in a garden";
+
+  useEffect(() => {
+    const fetchSub = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: sub } = await supabase
+          .from('user_subscriptions')
+          .select('*, plans(*)')
+          .eq('user_id', user.id)
+          .single();
+        setSubscription(sub);
+        
+        if (sub?.plans?.name === 'Free') {
+          setPrompt(fixedPrompt);
+        }
+      }
+    };
+    fetchSub();
+  }, []);
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,6 +65,8 @@ export const GenerationView: React.FC<GenerationViewProps> = ({ type, subType, o
     setProgress(0);
     setResult(null);
     setError(null);
+
+    const finalPrompt = isFreePlan ? fixedPrompt : prompt;
 
     try {
       // 1. Check User Session & Credits
@@ -78,7 +102,7 @@ export const GenerationView: React.FC<GenerationViewProps> = ({ type, subType, o
       // const response = await fetch('https://your-fastapi-url.com/generate', {
       //   method: 'POST',
       //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ prompt, model, duration, resolution, type, subType, user_id: user.id }),
+      //   body: JSON.stringify({ prompt: finalPrompt, model, duration, resolution, type, subType, user_id: user.id }),
       // });
       // const data = await response.json();
       
@@ -104,7 +128,7 @@ export const GenerationView: React.FC<GenerationViewProps> = ({ type, subType, o
         .insert({
           user_id: user.id,
           type,
-          prompt,
+          prompt: finalPrompt,
           url: dummyUrl,
           thumbnail_url: dummyUrl,
           expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString() // 1 hour
@@ -151,14 +175,27 @@ export const GenerationView: React.FC<GenerationViewProps> = ({ type, subType, o
         <div className="lg:col-span-2 space-y-6">
           <form onSubmit={handleGenerate} className="glass-card p-8 border-white/10 space-y-6">
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-3">Prompt</label>
+              <div className="flex items-center justify-between mb-3">
+                <label className="block text-sm font-medium text-slate-300">Prompt</label>
+                {isFreePlan && (
+                  <span className="text-[10px] bg-brand-purple/20 text-brand-purple px-2 py-0.5 rounded font-bold uppercase tracking-wider">
+                    Locked for Free Trial
+                  </span>
+                )}
+              </div>
               <textarea
                 required
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                placeholder="Describe what you want to create in detail..."
-                className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white focus:outline-none focus:ring-2 focus:ring-brand-purple/50 min-h-[120px] resize-none"
+                disabled={isFreePlan}
+                placeholder={isFreePlan ? fixedPrompt : "Describe what you want to create in detail..."}
+                className={`w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white focus:outline-none focus:ring-2 focus:ring-brand-purple/50 min-h-[120px] resize-none ${isFreePlan ? 'opacity-60 cursor-not-allowed' : ''}`}
               />
+              {isFreePlan && (
+                <p className="mt-2 text-[11px] text-slate-500 italic">
+                  Upgrade to Pro to unlock custom prompts and higher quality generations.
+                </p>
+              )}
             </div>
 
             {(type === 'image' || subType === 'image-to-video') && (

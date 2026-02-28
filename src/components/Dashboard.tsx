@@ -24,7 +24,7 @@ import { useNavigate } from 'react-router-dom';
 import { GenerationView } from './GenerationView';
 import { AdminPanel } from './AdminPanel';
 
-type View = 'main' | 'video-select' | 'video-gen' | 'image-gen' | 'history' | 'admin';
+type View = 'main' | 'video-select' | 'video-gen' | 'image-gen' | 'history' | 'admin' | 'plans';
 
 export const Dashboard = () => {
   const [user, setUser] = useState<any>(null);
@@ -91,8 +91,10 @@ export const Dashboard = () => {
   const stats = [
     { 
       label: 'Plan', 
-      value: subscription?.plans?.name || 'Free', 
-      icon: <Zap className="w-5 h-5 text-brand-purple" /> 
+      value: subscription?.plans?.name || 'No Plan', 
+      icon: <Zap className="w-5 h-5 text-brand-purple" />,
+      clickable: true,
+      onClick: () => setCurrentView('plans')
     },
     { 
       label: 'Credits', 
@@ -142,7 +144,8 @@ export const Dashboard = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.1 }}
-            className="glass-card p-6 border-white/10"
+            onClick={stat.clickable ? stat.onClick : undefined}
+            className={`glass-card p-6 border-white/10 ${stat.clickable ? 'cursor-pointer hover:border-brand-purple/50 transition-colors' : ''}`}
           >
             <div className="flex items-center gap-4 mb-4">
               <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
@@ -225,6 +228,118 @@ export const Dashboard = () => {
         </div>
       </section>
     </>
+  );
+
+  const activateFreePlan = async () => {
+    try {
+      const { data: plans } = await supabase.from('plans').select('*').eq('name', 'Free').single();
+      if (!plans) throw new Error('Free plan not found in database');
+
+      const { error } = await supabase
+        .from('user_subscriptions')
+        .update({
+          plan_id: plans.id,
+          credits_remaining: 5,
+          is_active: true,
+          expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+        })
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+      
+      // Refresh data
+      window.location.reload();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  const renderPlansView = () => (
+    <div className="max-w-5xl mx-auto py-12">
+      <div className="text-center mb-16">
+        <h1 className="text-4xl font-bold text-white mb-4">Subscription Plans</h1>
+        <p className="text-slate-400">Choose the best plan for your creative journey</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        {[
+          {
+            name: 'Free',
+            price: '0',
+            credits: '5 Credits',
+            features: ['Standard Quality', 'Locked Prompt Trial', 'Community Support'],
+            isFree: true
+          },
+          {
+            name: 'Pro',
+            price: '1000',
+            currency: 'PKR',
+            credits: '500 Credits',
+            features: ['HD Quality', 'Custom Prompts', 'Priority Queue', 'No Watermark'],
+            isFree: false
+          },
+          {
+            name: 'Enterprise',
+            price: 'Custom',
+            credits: 'Unlimited',
+            features: ['4K Quality', 'API Access', 'Dedicated Support', 'Team Tools'],
+            isFree: false
+          }
+        ].map((plan) => (
+          <div key={plan.name} className={`glass-card p-8 flex flex-col border-white/10 ${plan.name === subscription?.plans?.name ? 'border-brand-purple ring-1 ring-brand-purple' : ''}`}>
+            <div className="mb-8">
+              <h3 className="text-2xl font-bold text-white mb-2">{plan.name}</h3>
+              <div className="text-3xl font-extrabold text-white mb-4">
+                {plan.currency && <span className="text-lg mr-1">{plan.currency}</span>}
+                {plan.price}
+                {plan.price !== 'Custom' && plan.price !== '0' && <span className="text-sm text-slate-400 font-normal">/mo</span>}
+              </div>
+              <div className="flex items-center gap-2 text-brand-purple font-bold text-sm">
+                <Zap className="w-4 h-4" />
+                {plan.credits}
+              </div>
+            </div>
+            
+            <ul className="space-y-4 mb-10 flex-grow">
+              {plan.features.map((f, i) => (
+                <li key={i} className="flex items-center gap-3 text-slate-400 text-sm">
+                  <Plus className="w-4 h-4 text-emerald-400" />
+                  {f}
+                </li>
+              ))}
+            </ul>
+
+            {plan.isFree ? (
+              <button 
+                onClick={activateFreePlan}
+                disabled={subscription?.plans?.name === 'Free'}
+                className="w-full py-4 rounded-xl font-bold bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all disabled:opacity-50"
+              >
+                {subscription?.plans?.name === 'Free' ? 'Currently Active' : 'Activate Free Plan'}
+              </button>
+            ) : (
+              <a 
+                href="https://wa.me/923429907507"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-4 rounded-xl font-bold bg-brand-purple text-white text-center hover:opacity-90 transition-all shadow-lg shadow-brand-purple/20"
+              >
+                Contact on WhatsApp
+              </a>
+            )}
+          </div>
+        ))}
+      </div>
+      
+      <div className="mt-12 text-center">
+        <button 
+          onClick={() => setCurrentView('main')}
+          className="text-slate-400 hover:text-white transition-colors"
+        >
+          Back to Dashboard
+        </button>
+      </div>
+    </div>
   );
 
   const renderVideoSelect = () => (
@@ -350,6 +465,7 @@ export const Dashboard = () => {
             transition={{ duration: 0.2 }}
           >
             {currentView === 'main' && renderMainView()}
+            {currentView === 'plans' && renderPlansView()}
             {currentView === 'video-select' && renderVideoSelect()}
             {currentView === 'video-gen' && (
               <GenerationView 
