@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   ArrowLeft, 
+  ArrowRight,
   Upload, 
   Video, 
   Image as ImageIcon, 
@@ -22,9 +23,10 @@ interface GenerationViewProps {
   type: 'video' | 'image';
   subType?: 'text-to-video' | 'image-to-video';
   onBack: () => void;
+  onGoToPlans: () => void;
 }
 
-export const GenerationView: React.FC<GenerationViewProps> = ({ type, subType, onBack }) => {
+export const GenerationView: React.FC<GenerationViewProps> = ({ type, subType, onBack, onGoToPlans }) => {
   const [prompt, setPrompt] = useState('');
   const [subscription, setSubscription] = useState<any>(null);
   const [model, setModel] = useState('visionary-v2-turbo');
@@ -35,13 +37,16 @@ export const GenerationView: React.FC<GenerationViewProps> = ({ type, subType, o
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [loadingSub, setLoadingSub] = useState(true);
 
   const creditCost = type === 'video' ? 5 : 1;
   const isFreePlan = subscription?.plans?.name === 'Free';
+  const isActive = subscription?.is_active;
   const fixedPrompt = "a beautiful cat walking in a garden";
 
   useEffect(() => {
     const fetchSub = async () => {
+      setLoadingSub(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const { data: sub } = await supabase
@@ -55,12 +60,15 @@ export const GenerationView: React.FC<GenerationViewProps> = ({ type, subType, o
           setPrompt(fixedPrompt);
         }
       }
+      setLoadingSub(false);
     };
     fetchSub();
   }, []);
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isActive) return;
+    
     setIsGenerating(true);
     setProgress(0);
     setResult(null);
@@ -170,8 +178,27 @@ export const GenerationView: React.FC<GenerationViewProps> = ({ type, subType, o
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Form Section */}
+      <div className="relative">
+        {!isActive && !loadingSub && (
+          <div className="absolute inset-0 z-50 flex flex-col items-center justify-center backdrop-blur-md bg-[#030014]/40 rounded-3xl border border-white/10 p-8 text-center">
+            <div className="w-16 h-16 bg-brand-purple/20 rounded-full flex items-center justify-center mb-6">
+              <Zap className="w-8 h-8 text-brand-purple" />
+            </div>
+            <h2 className="text-2xl font-bold text-white mb-2">Activate a Plan First</h2>
+            <p className="text-slate-400 mb-8 max-w-sm">
+              You need an active plan to use the generation studio. Activate your free trial or upgrade to Pro to start creating.
+            </p>
+            <button 
+              onClick={onGoToPlans}
+              className="px-8 py-4 bg-brand-purple text-white rounded-full font-bold hover:opacity-90 transition-all flex items-center gap-2"
+            >
+              Go to Plans <ArrowRight className="w-5 h-5" />
+            </button>
+          </div>
+        )}
+
+        <div className={`grid grid-cols-1 lg:grid-cols-3 gap-8 ${!isActive ? 'opacity-20 pointer-events-none' : ''}`}>
+          {/* Form Section */}
         <div className="lg:col-span-2 space-y-6">
           <form onSubmit={handleGenerate} className="glass-card p-8 border-white/10 space-y-6">
             <div>
@@ -441,5 +468,6 @@ export const GenerationView: React.FC<GenerationViewProps> = ({ type, subType, o
         </div>
       </div>
     </div>
-  );
+  </div>
+);
 };

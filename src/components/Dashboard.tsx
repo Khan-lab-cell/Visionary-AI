@@ -247,8 +247,14 @@ export const Dashboard = () => {
 
       if (error) throw error;
       
-      // Refresh data
-      window.location.reload();
+      // Refresh data locally
+      const { data: subData } = await supabase
+        .from('user_subscriptions')
+        .select('*, plans(*)')
+        .eq('user_id', user.id)
+        .single();
+      setSubscription(subData);
+      setCurrentView('main');
     } catch (err: any) {
       alert(err.message);
     }
@@ -472,12 +478,14 @@ export const Dashboard = () => {
                 type="video" 
                 subType={videoSubType} 
                 onBack={() => setCurrentView('video-select')} 
+                onGoToPlans={() => setCurrentView('plans')}
               />
             )}
             {currentView === 'image-gen' && (
               <GenerationView 
                 type="image" 
                 onBack={() => setCurrentView('main')} 
+                onGoToPlans={() => setCurrentView('plans')}
               />
             )}
             {currentView === 'admin' && <AdminPanel />}
