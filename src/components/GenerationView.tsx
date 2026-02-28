@@ -14,7 +14,6 @@ import {
   Download,
   Play,
   Sparkles,
-  Music,
   Plus,
   XCircle
 } from 'lucide-react';
@@ -29,7 +28,6 @@ interface GenerationViewProps {
 export const GenerationView: React.FC<GenerationViewProps> = ({ type, subType, onBack, onGoToPlans }) => {
   const [prompt, setPrompt] = useState('');
   const [subscription, setSubscription] = useState<any>(null);
-  const [model, setModel] = useState('visionary-v2-turbo');
   const [duration, setDuration] = useState('5s');
   const [resolution, setResolution] = useState('1080p');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -252,43 +250,12 @@ export const GenerationView: React.FC<GenerationViewProps> = ({ type, subType, o
               </div>
             )}
 
-            {type === 'video' && (
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-3">Background Audio (Optional)</label>
-                <div className="relative group">
-                  <input
-                    type="file"
-                    accept="audio/*"
-                    className="absolute inset-0 opacity-0 cursor-pointer z-10"
-                  />
-                  <div className="border-2 border-dashed border-white/10 rounded-2xl p-4 text-center group-hover:border-brand-blue/50 transition-colors bg-white/5">
-                    <div className="flex items-center justify-center gap-2 text-slate-400">
-                      <Music className="w-4 h-4" />
-                      <span className="text-xs">Upload MP3 or WAV</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-3">Model</label>
-                <select 
-                  value={model}
-                  onChange={(e) => setModel(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:ring-2 focus:ring-brand-purple/50"
-                >
-                  <option value="visionary-v2-turbo">Visionary V2 Turbo</option>
-                  <option value="cinematic-pro">Cinematic Pro</option>
-                  <option value="realistic-v3">Realistic V3</option>
-                </select>
-              </div>
               {type === 'video' && (
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-3">Duration</label>
                   <div className="flex gap-2">
-                    {['5s', '10s', '15s'].map((d) => (
+                    {['5s', '10s', '15s', '20s'].map((d) => (
                       <button
                         key={d}
                         type="button"
@@ -303,10 +270,10 @@ export const GenerationView: React.FC<GenerationViewProps> = ({ type, subType, o
                   </div>
                 </div>
               )}
-              <div>
+              <div className={type === 'image' ? 'md:col-span-2' : ''}>
                 <label className="block text-sm font-medium text-slate-300 mb-3">Resolution</label>
                 <div className="flex gap-2">
-                  {['720p', '1080p', '4K'].map((r) => (
+                  {['480p', '720p', '1080p'].map((r) => (
                     <button
                       key={r}
                       type="button"
@@ -321,6 +288,17 @@ export const GenerationView: React.FC<GenerationViewProps> = ({ type, subType, o
                 </div>
               </div>
             </div>
+
+            {type === 'video' && (
+              <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-start gap-3">
+                <div className="w-5 h-5 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Zap className="w-3 h-3 text-amber-500" />
+                </div>
+                <p className="text-xs text-amber-200/80 leading-relaxed">
+                  <span className="font-bold text-amber-400">Note:</span> 1080p and larger than 5sec video takes too much time to process. Please be patient.
+                </p>
+              </div>
+            )}
 
             <div className="pt-4">
               {error && (
