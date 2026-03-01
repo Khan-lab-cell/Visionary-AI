@@ -100,28 +100,43 @@ export const GenerationView: React.FC<GenerationViewProps> = ({ type, subType, o
             clearInterval(interval);
             return 95;
           }
-          return prev + Math.random() * 10;
+          return prev + Math.random() * 5;
         });
-      }, 500);
+      }, 1000);
 
-      // 3. Placeholder for FastAPI call
-      // const response = await fetch('https://your-fastapi-url.com/generate', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ prompt: finalPrompt, model, duration, resolution, type, subType, user_id: user.id }),
-      // });
-      // const data = await response.json();
+      // 3. Real FastAPI call
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://your-fastapi-url.com';
       
-      await new Promise(resolve => setTimeout(resolve, 4000));
+      const formData = new FormData();
+      formData.append('prompt', finalPrompt);
+      formData.append('duration', duration);
+      formData.append('resolution', resolution);
+      formData.append('type', type);
+      formData.append('subType', subType || '');
+      formData.append('user_id', user.id);
+      
+      if (uploadedFile) {
+        formData.append('file', uploadedFile);
+      }
+
+      const response = await fetch(`${apiUrl}/api/generate`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || 'Generation failed on backend');
+      }
+
+      const data = await response.json();
+      const finalUrl = data.url || (type === 'video' 
+        ? 'https://cdn.pixabay.com/video/2023/10/20/185848-876610237_tiny.mp4'
+        : `https://picsum.photos/seed/${Math.random()}/1920/1080`);
       
       clearInterval(interval);
       setProgress(100);
-      
-      const dummyUrl = type === 'video' 
-        ? 'https://cdn.pixabay.com/video/2023/10/20/185848-876610237_tiny.mp4'
-        : `https://picsum.photos/seed/${Math.random()}/1920/1080`;
-      
-      setResult(dummyUrl);
+      setResult(finalUrl);
 
       // 4. Deduct Credits & Save Project
       await supabase
@@ -135,8 +150,8 @@ export const GenerationView: React.FC<GenerationViewProps> = ({ type, subType, o
           user_id: user.id,
           type,
           prompt: finalPrompt,
-          url: dummyUrl,
-          thumbnail_url: dummyUrl,
+          url: finalUrl,
+          thumbnail_url: finalUrl,
           expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString() // 1 hour
         });
 

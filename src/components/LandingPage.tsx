@@ -328,7 +328,7 @@ const CreatorHighlight = () => {
             <div className="relative">
               <div className="aspect-square max-w-md mx-auto rounded-3xl overflow-hidden border border-slate-200 shadow-xl glow-secondary">
                 <img
-                  src="/images/creator.PNG"
+                  src="https://picsum.photos/seed/mohsin/600/600"
                   alt="Mohsin Sultan"
                   className="w-full h-full object-cover"
                   referrerPolicy="no-referrer"
@@ -340,8 +340,8 @@ const CreatorHighlight = () => {
                     <Twitter className="w-6 h-6 text-brand-primary fill-current" />
                   </div>
                   <div>
-                    <div className="font-bold text-slate-900">@MalikMohsin</div>
-                    <div className="text-xs text-slate-500">10k Followers</div>
+                    <div className="font-bold text-slate-900">@mohsinsultan</div>
+                    <div className="text-xs text-slate-500">1.2M Followers</div>
                   </div>
                 </div>
               </div>
@@ -438,7 +438,7 @@ const Pricing = () => {
       name: "Starter",
       price: "Free",
       desc: "Perfect for testing the waters.",
-      features: ["10 Credit", "720p Export", "Standard Queue", "Community Support"],
+      features: ["1 Credit", "720p Export", "Standard Queue", "Community Support"],
       cta: "Start for Free",
       highlight: false
     },
