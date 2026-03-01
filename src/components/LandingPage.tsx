@@ -24,22 +24,9 @@ import { useNavigate } from 'react-router-dom';
 
 // --- Components ---
 
-const Navbar = () => {
+const Navbar = ({ user }: { user: any }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [user, setUser] = useState<any>(null);
   const navigate = useNavigate();
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -155,15 +142,8 @@ const Navbar = () => {
   );
 };
 
-const Hero = () => {
+const Hero = ({ user }: { user: any }) => {
   const navigate = useNavigate();
-  const [user, setUser] = useState<any>(null);
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user);
-    });
-  }, []);
 
   return (
     <section className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden">
@@ -432,7 +412,8 @@ const Features = () => {
   );
 };
 
-const Pricing = () => {
+const Pricing = ({ user }: { user: any }) => {
+  const navigate = useNavigate();
   const tiers = [
     {
       name: "Starter",
@@ -506,7 +487,9 @@ const Pricing = () => {
                   </li>
                 ))}
               </ul>
-              <button className={`w-full py-4 rounded-full font-bold transition-all ${
+              <button 
+                onClick={() => navigate(user ? '/dashboard' : '/login')}
+                className={`w-full py-4 rounded-full font-bold transition-all ${
                 tier.highlight 
                   ? 'bg-brand-primary text-white hover:opacity-90 shadow-lg shadow-brand-primary/20' 
                   : 'bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100'
@@ -636,15 +619,29 @@ const Footer = () => {
 };
 
 export const LandingPage = () => {
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
   return (
     <div className="min-h-screen">
-      <Navbar />
+      <Navbar user={user} />
       <main>
-        <Hero />
+        <Hero user={user} />
         <Showcase />
         <CreatorHighlight />
         <Features />
-        <Pricing />
+        <Pricing user={user} />
       </main>
       <Footer />
     </div>

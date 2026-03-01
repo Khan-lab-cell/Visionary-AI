@@ -22,7 +22,9 @@ export const AdminPanel = () => {
   const [search, setSearch] = useState('');
   const [plans, setPlans] = useState<any[]>([]);
   const [editingCredits, setEditingCredits] = useState<string | null>(null);
+  const [editingBalance, setEditingBalance] = useState<string | null>(null);
   const [newCredits, setNewCredits] = useState<number>(0);
+  const [newBalance, setNewBalance] = useState<number>(0);
 
   useEffect(() => {
     fetchData();
@@ -86,6 +88,20 @@ export const AdminPanel = () => {
       fetchData();
     } else {
       alert('Error updating credits: ' + error.message);
+    }
+  };
+
+  const updateBalance = async (userId: string) => {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ balance_pkr: newBalance })
+      .eq('id', userId);
+    
+    if (!error) {
+      setEditingBalance(null);
+      fetchData();
+    } else {
+      alert('Error updating balance: ' + error.message);
     }
   };
 
@@ -160,6 +176,7 @@ export const AdminPanel = () => {
               <tr className="border-b border-slate-100 bg-slate-50/50">
                 <th className="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider">User Details</th>
                 <th className="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Subscription Plan</th>
+                <th className="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Balance (PKR)</th>
                 <th className="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Credits</th>
                 <th className="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
                 <th className="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Actions</th>
@@ -168,7 +185,8 @@ export const AdminPanel = () => {
             <tbody className="divide-y divide-slate-50">
               {filteredUsers.length > 0 ? filteredUsers.map((user) => {
                 const sub = user.user_subscriptions?.[0];
-                const isEditing = editingCredits === user.id;
+                const isEditingCredits = editingCredits === user.id;
+                const isEditingBalance = editingBalance === user.id;
 
                 return (
                   <tr key={user.id} className="hover:bg-slate-50/50 transition-colors group">
@@ -201,7 +219,40 @@ export const AdminPanel = () => {
                       </div>
                     </td>
                     <td className="p-4">
-                      {isEditing ? (
+                      {isEditingBalance ? (
+                        <div className="flex items-center gap-2">
+                          <input 
+                            type="number"
+                            value={newBalance}
+                            onChange={(e) => setNewBalance(parseInt(e.target.value) || 0)}
+                            className="w-20 bg-slate-50 border border-slate-200 rounded px-2 py-1 text-xs text-slate-900 focus:outline-none"
+                          />
+                          <button onClick={() => updateBalance(user.id)} className="text-emerald-500 hover:text-emerald-600">
+                            <Save className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => setEditingBalance(null)} className="text-red-500 hover:text-red-600">
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 group/balance">
+                          <div className="text-sm text-slate-900 font-medium">
+                            {user.balance_pkr || 0} PKR
+                          </div>
+                          <button 
+                            onClick={() => {
+                              setEditingBalance(user.id);
+                              setNewBalance(user.balance_pkr || 0);
+                            }}
+                            className="opacity-0 group-hover/balance:opacity-100 transition-opacity p-1 hover:bg-slate-100 rounded"
+                          >
+                            <Edit2 className="w-3 h-3 text-slate-400" />
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                    <td className="p-4">
+                      {isEditingCredits ? (
                         <div className="flex items-center gap-2">
                           <input 
                             type="number"

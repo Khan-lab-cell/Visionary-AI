@@ -210,7 +210,7 @@ export const GenerationView: React.FC<GenerationViewProps> = ({ type, subType, o
           </div>
         )}
 
-        <div className={`grid grid-cols-1 lg:grid-cols-3 gap-8 ${!isActive ? 'opacity-20 pointer-events-none' : ''}`}>
+        <div className={`grid grid-cols-1 lg:grid-cols-3 gap-8 ${(isActive === false && !loadingSub) ? 'opacity-20 pointer-events-none' : ''}`}>
           {/* Form Section */}
         <div className="lg:col-span-2 space-y-6">
           <form onSubmit={handleGenerate} className="glass-card p-8 border-white/10 space-y-6">
@@ -460,7 +460,7 @@ export const GenerationView: React.FC<GenerationViewProps> = ({ type, subType, o
           </div>
         </div>
       </div>
+      </div>
     </div>
-  </div>
-);
+  );
 };
