@@ -24,7 +24,7 @@ import { useNavigate } from 'react-router-dom';
 import { GenerationView } from './GenerationView';
 import { AdminPanel } from './AdminPanel';
 
-type View = 'main' | 'video-select' | 'video-gen' | 'image-gen' | 'history' | 'admin' | 'plans' | 'top-up';
+type View = 'main' | 'video-select' | 'video-gen' | 'image-gen' | 'history' | 'admin' | 'plans';
 
 export const Dashboard = () => {
   const [user, setUser] = useState<any>(null);
@@ -36,44 +36,42 @@ export const Dashboard = () => {
   const [videoSubType, setVideoSubType] = useState<'text-to-video' | 'image-to-video' | undefined>();
   const navigate = useNavigate();
 
-  const fetchData = async () => {
-    setLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      navigate('/login');
-      return;
-    }
-    setUser(user);
-
-    // Fetch Profile
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single();
-    setProfile(profileData);
-
-    // Fetch Subscription
-    const { data: subData } = await supabase
-      .from('user_subscriptions')
-      .select('*, plans(*)')
-      .eq('user_id', user.id)
-      .single();
-    setSubscription(subData);
-
-    // Fetch Projects (only non-expired)
-    const { data: projectData } = await supabase
-      .from('projects')
-      .select('*')
-      .eq('user_id', user.id)
-      .gt('expires_at', new Date().toISOString())
-      .order('created_at', { ascending: false });
-    setProjects(projectData || []);
-
-    setLoading(false);
-  };
-
   useEffect(() => {
+    const fetchData = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        navigate('/login');
+        return;
+      }
+      setUser(user);
+
+      // Fetch Profile
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      setProfile(profileData);
+
+      // Fetch Subscription
+      const { data: subData } = await supabase
+        .from('user_subscriptions')
+        .select('*, plans(*)')
+        .eq('user_id', user.id)
+        .single();
+      setSubscription(subData);
+
+      // Fetch Projects (only non-expired)
+      const { data: projectData } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('user_id', user.id)
+        .gt('expires_at', new Date().toISOString())
+        .order('created_at', { ascending: false });
+      setProjects(projectData || []);
+
+      setLoading(false);
+    };
     fetchData();
   }, [navigate]);
 
@@ -92,16 +90,9 @@ export const Dashboard = () => {
 
   const stats = [
     { 
-      label: 'Wallet Balance', 
-      value: `${profile?.balance_pkr || 0} PKR`, 
-      icon: <Zap className="w-5 h-5 text-brand-primary" />,
-      clickable: true,
-      onClick: () => setCurrentView('top-up')
-    },
-    { 
       label: 'Plan', 
       value: subscription?.plans?.name || 'No Plan', 
-      icon: <ShieldCheck className="w-5 h-5 text-brand-primary" />,
+      icon: <Zap className="w-5 h-5 text-brand-primary" />,
       clickable: true,
       onClick: () => setCurrentView('plans')
     },
@@ -110,12 +101,17 @@ export const Dashboard = () => {
       value: `${subscription?.credits_remaining || 0} Left`, 
       icon: <Sparkles className="w-5 h-5 text-brand-secondary" /> 
     },
+    { 
+      label: 'Projects', 
+      value: projects.length.toString(), 
+      icon: <History className="w-5 h-5 text-emerald-500" /> 
+    },
   ];
 
   const actions = [
-    { id: 'video', label: 'Generate Video', icon: <Video className="w-8 h-8" />, color: 'from-brand-primary to-brand-secondary' },
-    { id: 'image', label: 'Generate Image', icon: <ImageIcon className="w-8 h-8" />, color: 'from-brand-secondary to-emerald-400' },
-    { id: 'history', label: 'Projects History', icon: <History className="w-8 h-8" />, color: 'from-brand-primary/50 to-brand-secondary/50' },
+    { id: 'video', label: 'Generate Video', icon: <Video className="w-8 h-8" />, color: 'from-brand-primary to-brand-blue' },
+    { id: 'image', label: 'Generate Image', icon: <ImageIcon className="w-8 h-8" />, color: 'from-brand-blue to-brand-primary' },
+    { id: 'history', label: 'Projects History', icon: <History className="w-8 h-8" />, color: 'from-slate-400 to-slate-500' },
   ];
 
   const renderMainView = () => (
@@ -174,16 +170,16 @@ export const Dashboard = () => {
               else if (action.id === 'image') setCurrentView('image-gen');
               else if (action.id === 'history') setCurrentView('history');
             }}
-            className={`relative overflow-hidden rounded-3xl p-8 text-left group h-48`}
+            className={`relative overflow-hidden rounded-3xl p-8 text-left group h-48 shadow-lg shadow-brand-blue/10`}
           >
-            <div className={`absolute inset-0 bg-gradient-to-br ${action.color} opacity-20 group-hover:opacity-30 transition-opacity`} />
+            <div className={`absolute inset-0 bg-gradient-to-br ${action.color} transition-opacity`} />
             <div className="relative z-10 flex flex-col h-full">
               <div className="mb-auto text-white group-hover:scale-110 transition-transform origin-left">
                 {action.icon}
               </div>
               <div>
                 <h3 className="text-xl font-bold text-white mb-1">{action.label}</h3>
-                <p className="text-sm text-white/80 opacity-80">Start a new project</p>
+                <p className="text-sm text-white/90">Start a new project</p>
               </div>
               <Plus className="absolute top-8 right-8 w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
@@ -264,85 +260,6 @@ export const Dashboard = () => {
     }
   };
 
-  const buyProPlan = async () => {
-    try {
-      const proPrice = 1000;
-      if ((profile?.balance_pkr || 0) < proPrice) {
-        setCurrentView('top-up');
-        return;
-      }
-
-      const { data: plans } = await supabase.from('plans').select('*').eq('name', 'Pro').single();
-      if (!plans) throw new Error('Pro plan not found in database');
-
-      // 1. Deduct balance
-      const { error: balanceError } = await supabase
-        .from('profiles')
-        .update({ balance_pkr: profile.balance_pkr - proPrice })
-        .eq('id', user.id);
-      
-      if (balanceError) throw balanceError;
-
-      // 2. Update subscription
-      const { error: subError } = await supabase
-        .from('user_subscriptions')
-        .update({
-          plan_id: plans.id,
-          credits_remaining: 500,
-          is_active: true,
-          expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-        })
-        .eq('user_id', user.id);
-
-      if (subError) throw subError;
-      
-      await fetchData();
-      setCurrentView('main');
-      alert('Pro Plan Activated Successfully!');
-    } catch (err: any) {
-      alert(err.message);
-    }
-  };
-
-  const renderTopUpView = () => (
-    <div className="max-w-2xl mx-auto py-12">
-      <div className="glass-card p-12 text-center border-slate-200 shadow-xl">
-        <div className="w-20 h-20 bg-brand-primary/10 rounded-full flex items-center justify-center mx-auto mb-8">
-          <Zap className="w-10 h-10 text-brand-primary" />
-        </div>
-        <h1 className="text-4xl font-bold text-slate-900 mb-4">Top Up Your Account</h1>
-        <p className="text-slate-600 mb-8 leading-relaxed">
-          To add money to your account, please contact us on WhatsApp. Send your account email and the amount you wish to top up.
-        </p>
-        
-        <div className="bg-slate-50 rounded-2xl p-6 mb-10 border border-slate-100">
-          <p className="text-sm text-slate-500 mb-1">Your Account Balance</p>
-          <p className="text-3xl font-bold text-slate-900">{profile?.balance_pkr || 0} PKR</p>
-        </div>
-
-        <div className="space-y-4">
-          <a 
-            href="https://wa.me/923429907507"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full py-5 rounded-2xl font-bold bg-[#25D366] text-white flex items-center justify-center gap-3 hover:opacity-90 transition-all shadow-lg shadow-green-500/20"
-          >
-            <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
-              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.067 2.877 1.215 3.076.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-            </svg>
-            Contact on WhatsApp
-          </a>
-          <button 
-            onClick={() => setCurrentView('main')}
-            className="w-full py-4 text-slate-500 hover:text-brand-primary transition-colors font-medium"
-          >
-            Back to Dashboard
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-
   const renderPlansView = () => (
     <div className="max-w-5xl mx-auto py-12">
       <div className="text-center mb-16">
@@ -398,7 +315,7 @@ export const Dashboard = () => {
               ))}
             </ul>
 
-            {plan.name === 'Free' ? (
+            {plan.isFree ? (
               <button 
                 onClick={activateFreePlan}
                 disabled={subscription?.plans?.name === 'Free'}
@@ -406,20 +323,12 @@ export const Dashboard = () => {
               >
                 {subscription?.plans?.name === 'Free' ? 'Currently Active' : 'Activate Free Plan'}
               </button>
-            ) : plan.name === 'Pro' ? (
-              <button 
-                onClick={buyProPlan}
-                disabled={subscription?.plans?.name === 'Pro'}
-                className="w-full py-4 rounded-xl font-bold bg-brand-primary text-white hover:opacity-90 transition-all shadow-lg shadow-brand-primary/20 disabled:opacity-50"
-              >
-                {subscription?.plans?.name === 'Pro' ? 'Currently Active' : `Buy Pro (1000 PKR)`}
-              </button>
             ) : (
               <a 
                 href="https://wa.me/923429907507"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full py-4 rounded-xl font-bold bg-slate-900 text-white text-center hover:opacity-90 transition-all"
+                className="w-full py-4 rounded-xl font-bold bg-brand-primary text-white text-center hover:opacity-90 transition-all shadow-lg shadow-brand-primary/20"
               >
                 Contact on WhatsApp
               </a>
@@ -563,7 +472,6 @@ export const Dashboard = () => {
           >
             {currentView === 'main' && renderMainView()}
             {currentView === 'plans' && renderPlansView()}
-            {currentView === 'top-up' && renderTopUpView()}
             {currentView === 'video-select' && renderVideoSelect()}
             {currentView === 'video-gen' && (
               <GenerationView 

@@ -72,7 +72,7 @@ export const GenerationView: React.FC<GenerationViewProps> = ({ type, subType, o
     setResult(null);
     setError(null);
 
-    const finalPrompt = isFreePlan ? fixedPrompt : prompt;
+    const finalPrompt = prompt;
 
     try {
       // 1. Check User Session & Credits
@@ -104,35 +104,42 @@ export const GenerationView: React.FC<GenerationViewProps> = ({ type, subType, o
         });
       }, 1000);
 
-      // 3. Real FastAPI call
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://your-fastapi-url.com';
-      
-      const formData = new FormData();
-      formData.append('prompt', finalPrompt);
-      formData.append('duration', duration);
-      formData.append('resolution', resolution);
-      formData.append('type', type);
-      formData.append('subType', subType || '');
-      formData.append('user_id', user.id);
-      
-      if (uploadedFile) {
-        formData.append('file', uploadedFile);
+      // 3. API Call or Mock Simulation
+      const apiUrl = import.meta.env.VITE_API_URL;
+      let finalUrl = '';
+
+      if (apiUrl && apiUrl !== 'https://your-fastapi-url.com') {
+        const formData = new FormData();
+        formData.append('prompt', finalPrompt);
+        formData.append('duration', duration);
+        formData.append('resolution', resolution);
+        formData.append('type', type);
+        formData.append('subType', subType || '');
+        formData.append('user_id', user.id);
+        
+        if (uploadedFile) {
+          formData.append('file', uploadedFile);
+        }
+
+        const response = await fetch(`${apiUrl}/api/generate`, {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.detail || 'Generation failed on backend');
+        }
+
+        const data = await response.json();
+        finalUrl = data.url;
+      } else {
+        // Simulation mode for demo/development
+        await new Promise(resolve => setTimeout(resolve, 5000)); // Simulate extra processing time
+        finalUrl = type === 'video' 
+          ? 'https://cdn.pixabay.com/video/2023/10/20/185848-876610237_tiny.mp4'
+          : `https://picsum.photos/seed/${Math.random()}/1920/1080`;
       }
-
-      const response = await fetch(`${apiUrl}/api/generate`, {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || 'Generation failed on backend');
-      }
-
-      const data = await response.json();
-      const finalUrl = data.url || (type === 'video' 
-        ? 'https://cdn.pixabay.com/video/2023/10/20/185848-876610237_tiny.mp4'
-        : `https://picsum.photos/seed/${Math.random()}/1920/1080`);
       
       clearInterval(interval);
       setProgress(100);
@@ -173,21 +180,21 @@ export const GenerationView: React.FC<GenerationViewProps> = ({ type, subType, o
     <div className="max-w-4xl mx-auto">
       <button 
         onClick={onBack}
-        className="flex items-center gap-2 text-slate-400 hover:text-white mb-8 transition-colors group"
+        className="flex items-center gap-2 text-slate-500 hover:text-brand-blue mb-8 transition-colors group font-medium"
       >
         <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
         Back to Dashboard
       </button>
 
       <div className="flex items-center gap-4 mb-8">
-        <div className="w-12 h-12 rounded-2xl bg-brand-purple/20 flex items-center justify-center">
-          {type === 'video' ? <Video className="text-brand-purple w-6 h-6" /> : <ImageIcon className="text-brand-blue w-6 h-6" />}
+        <div className="w-12 h-12 rounded-2xl bg-brand-blue/10 flex items-center justify-center">
+          {type === 'video' ? <Video className="text-brand-blue w-6 h-6" /> : <ImageIcon className="text-brand-blue w-6 h-6" />}
         </div>
         <div>
-          <h1 className="text-3xl font-bold text-white">
+          <h1 className="text-3xl font-bold text-slate-900">
             {type === 'video' ? (subType === 'image-to-video' ? 'Image to Video' : 'Text to Video') : 'AI Image Generation'}
           </h1>
-          <p className="text-slate-400">Create high-quality {type}s with advanced AI models</p>
+          <p className="text-slate-600">Create high-quality {type}s with advanced AI models</p>
         </div>
       </div>
 
@@ -213,13 +220,13 @@ export const GenerationView: React.FC<GenerationViewProps> = ({ type, subType, o
         <div className={`grid grid-cols-1 lg:grid-cols-3 gap-8 ${(isActive === false && !loadingSub) ? 'opacity-20 pointer-events-none' : ''}`}>
           {/* Form Section */}
         <div className="lg:col-span-2 space-y-6">
-          <form onSubmit={handleGenerate} className="glass-card p-8 border-white/10 space-y-6">
+          <form onSubmit={handleGenerate} className="glass-card p-8 border-slate-200 space-y-6">
             <div>
               <div className="flex items-center justify-between mb-3">
-                <label className="block text-sm font-medium text-slate-300">Prompt</label>
+                <label className="block text-sm font-medium text-slate-700">Prompt</label>
                 {isFreePlan && (
-                  <span className="text-[10px] bg-brand-purple/20 text-brand-purple px-2 py-0.5 rounded font-bold uppercase tracking-wider">
-                    Locked for Free Trial
+                  <span className="text-[10px] bg-brand-blue/10 text-brand-blue px-2 py-0.5 rounded font-bold uppercase tracking-wider">
+                    Free Trial Mode
                   </span>
                 )}
               </div>
@@ -227,9 +234,8 @@ export const GenerationView: React.FC<GenerationViewProps> = ({ type, subType, o
                 required
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                disabled={isFreePlan}
-                placeholder={isFreePlan ? fixedPrompt : "Describe what you want to create in detail..."}
-                className={`w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white focus:outline-none focus:ring-2 focus:ring-brand-purple/50 min-h-[120px] resize-none ${isFreePlan ? 'opacity-60 cursor-not-allowed' : ''}`}
+                placeholder="Describe what you want to create in detail..."
+                className="w-full bg-slate-50 border border-slate-300 rounded-2xl p-4 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/50 min-h-[120px] resize-none font-medium"
               />
               {isFreePlan && (
                 <p className="mt-2 text-[11px] text-slate-500 italic">
@@ -240,7 +246,7 @@ export const GenerationView: React.FC<GenerationViewProps> = ({ type, subType, o
 
             {(type === 'image' || subType === 'image-to-video') && (
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-3">Reference Image (Optional)</label>
+                <label className="block text-sm font-medium text-slate-700 mb-3">Reference Image (Optional)</label>
                 <div className="relative group">
                   <input
                     type="file"
@@ -248,16 +254,16 @@ export const GenerationView: React.FC<GenerationViewProps> = ({ type, subType, o
                     onChange={handleFileChange}
                     className="absolute inset-0 opacity-0 cursor-pointer z-10"
                   />
-                  <div className="border-2 border-dashed border-white/10 rounded-2xl p-8 text-center group-hover:border-brand-purple/50 transition-colors bg-white/5">
+                  <div className="border-2 border-dashed border-slate-200 rounded-2xl p-8 text-center group-hover:border-brand-blue/50 transition-colors bg-slate-50">
                     {uploadedFile ? (
-                      <div className="flex items-center justify-center gap-2 text-emerald-400">
+                      <div className="flex items-center justify-center gap-2 text-emerald-600">
                         <ImageIcon className="w-5 h-5" />
                         <span className="text-sm font-medium">{uploadedFile.name}</span>
                       </div>
                     ) : (
                       <>
-                        <Upload className="w-8 h-8 text-slate-500 mx-auto mb-2 group-hover:text-brand-purple transition-colors" />
-                        <p className="text-sm text-slate-400">Click or drag image to upload</p>
+                        <Upload className="w-8 h-8 text-slate-400 mx-auto mb-2 group-hover:text-brand-blue transition-colors" />
+                        <p className="text-sm text-slate-500">Click or drag image to upload</p>
                       </>
                     )}
                   </div>
@@ -268,7 +274,7 @@ export const GenerationView: React.FC<GenerationViewProps> = ({ type, subType, o
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {type === 'video' && (
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-3">Duration</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-3">Duration</label>
                   <div className="flex gap-2">
                     {['5s', '10s', '15s', '20s'].map((d) => (
                       <button
@@ -276,7 +282,7 @@ export const GenerationView: React.FC<GenerationViewProps> = ({ type, subType, o
                         type="button"
                         onClick={() => setDuration(d)}
                         className={`flex-grow py-3 rounded-xl text-sm font-medium transition-all ${
-                          duration === d ? 'bg-brand-purple text-white' : 'bg-white/5 text-slate-400 hover:bg-white/10'
+                          duration === d ? 'bg-brand-blue text-white' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
                         }`}
                       >
                         {d}
@@ -286,7 +292,7 @@ export const GenerationView: React.FC<GenerationViewProps> = ({ type, subType, o
                 </div>
               )}
               <div className={type === 'image' ? 'md:col-span-2' : ''}>
-                <label className="block text-sm font-medium text-slate-300 mb-3">Resolution</label>
+                <label className="block text-sm font-medium text-slate-700 mb-3">Resolution</label>
                 <div className="flex gap-2">
                   {['480p', '720p', '1080p'].map((r) => (
                     <button
@@ -294,7 +300,7 @@ export const GenerationView: React.FC<GenerationViewProps> = ({ type, subType, o
                       type="button"
                       onClick={() => setResolution(r)}
                       className={`flex-grow py-3 rounded-xl text-sm font-medium transition-all ${
-                        resolution === r ? 'bg-brand-blue text-white' : 'bg-white/5 text-slate-400 hover:bg-white/10'
+                        resolution === r ? 'bg-brand-blue text-white' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
                       }`}
                     >
                       {r}
@@ -323,16 +329,16 @@ export const GenerationView: React.FC<GenerationViewProps> = ({ type, subType, o
                 </div>
               )}
               <div className="flex items-center justify-between mb-4 px-2">
-                <div className="flex items-center gap-2 text-slate-400 text-sm">
-                  <Zap className="w-4 h-4 text-brand-purple" />
+                <div className="flex items-center gap-2 text-slate-500 text-sm">
+                  <Zap className="w-4 h-4 text-brand-blue" />
                   Estimated Cost
                 </div>
-                <span className="text-white font-bold">{creditCost} Credits</span>
+                <span className="text-slate-900 font-bold">{creditCost} Credits</span>
               </div>
               <button
                 type="submit"
                 disabled={isGenerating || !prompt}
-                className="w-full py-4 bg-gradient-to-r from-brand-purple to-brand-blue text-white rounded-2xl font-bold hover:opacity-90 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-4 bg-brand-blue text-white rounded-2xl font-bold hover:bg-brand-primary transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-brand-blue/20"
               >
                 {isGenerating ? (
                   <>
@@ -352,8 +358,8 @@ export const GenerationView: React.FC<GenerationViewProps> = ({ type, subType, o
 
         {/* Preview Section */}
         <div className="space-y-6">
-          <div className="glass-card p-6 border-white/10 h-full flex flex-col">
-            <h3 className="text-lg font-bold text-white mb-6">Preview</h3>
+          <div className="glass-card p-6 border-slate-200 h-full flex flex-col">
+            <h3 className="text-lg font-bold text-slate-900 mb-6">Preview</h3>
             
             <div className="flex-grow flex flex-col items-center justify-center text-center">
               <AnimatePresence mode="wait">
@@ -368,7 +374,7 @@ export const GenerationView: React.FC<GenerationViewProps> = ({ type, subType, o
                     <div className="relative w-32 h-32 mx-auto">
                       <svg className="w-full h-full" viewBox="0 0 100 100">
                         <circle
-                          className="text-white/5 stroke-current"
+                          className="text-slate-100 stroke-current"
                           strokeWidth="8"
                           cx="50"
                           cy="50"
@@ -376,7 +382,7 @@ export const GenerationView: React.FC<GenerationViewProps> = ({ type, subType, o
                           fill="transparent"
                         ></circle>
                         <circle
-                          className="text-brand-purple stroke-current transition-all duration-500 ease-out"
+                          className="text-brand-blue stroke-current transition-all duration-500 ease-out"
                           strokeWidth="8"
                           strokeDasharray={251.2}
                           strokeDashoffset={251.2 - (251.2 * progress) / 100}
@@ -387,17 +393,17 @@ export const GenerationView: React.FC<GenerationViewProps> = ({ type, subType, o
                           fill="transparent"
                         ></circle>
                       </svg>
-                      <div className="absolute inset-0 flex items-center justify-center text-xl font-bold text-white">
+                      <div className="absolute inset-0 flex items-center justify-center text-xl font-bold text-slate-900">
                         {Math.round(progress)}%
                       </div>
                     </div>
                     <div>
-                      <p className="text-white font-medium mb-1">AI is dreaming...</p>
+                      <p className="text-slate-900 font-medium mb-1">AI is dreaming...</p>
                       <p className="text-slate-500 text-sm">Estimated time: 30s</p>
                     </div>
-                    <div className="w-full bg-white/5 rounded-full h-2 overflow-hidden">
+                    <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
                       <motion.div 
-                        className="h-full bg-gradient-to-r from-brand-purple to-brand-blue"
+                        className="h-full bg-brand-blue"
                         initial={{ width: 0 }}
                         animate={{ width: `${progress}%` }}
                       />
@@ -410,7 +416,7 @@ export const GenerationView: React.FC<GenerationViewProps> = ({ type, subType, o
                     animate={{ opacity: 1, scale: 1 }}
                     className="w-full space-y-6"
                   >
-                    <div className="aspect-video rounded-2xl overflow-hidden bg-black border border-white/10 relative group">
+                    <div className="aspect-video rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 relative group">
                       {type === 'video' ? (
                         <video 
                           src={result} 
@@ -428,13 +434,13 @@ export const GenerationView: React.FC<GenerationViewProps> = ({ type, subType, o
                       )}
                     </div>
                     <div className="flex gap-3">
-                      <button className="flex-grow py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl font-medium transition-all flex items-center justify-center gap-2">
+                      <button className="flex-grow py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-medium transition-all flex items-center justify-center gap-2">
                         <Download className="w-4 h-4" />
                         Download
                       </button>
                       <button 
                         onClick={() => setResult(null)}
-                        className="p-3 bg-white/5 hover:bg-white/10 text-slate-400 rounded-xl transition-all"
+                        className="p-3 bg-slate-50 hover:bg-slate-100 text-slate-400 rounded-xl transition-all"
                       >
                         <Plus className="w-5 h-5" />
                       </button>
@@ -447,10 +453,10 @@ export const GenerationView: React.FC<GenerationViewProps> = ({ type, subType, o
                     animate={{ opacity: 1 }}
                     className="space-y-4"
                   >
-                    <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
-                      {type === 'video' ? <Video className="w-8 h-8 text-slate-600" /> : <ImageIcon className="w-8 h-8 text-slate-600" />}
+                    <div className="w-20 h-20 rounded-full bg-slate-50 flex items-center justify-center mx-auto mb-4">
+                      {type === 'video' ? <Video className="w-8 h-8 text-slate-300" /> : <ImageIcon className="w-8 h-8 text-slate-300" />}
                     </div>
-                    <p className="text-slate-500 text-sm max-w-[200px] mx-auto">
+                    <p className="text-slate-400 text-sm max-w-[200px] mx-auto">
                       Your generated {type} will appear here after processing
                     </p>
                   </motion.div>
@@ -459,7 +465,7 @@ export const GenerationView: React.FC<GenerationViewProps> = ({ type, subType, o
             </div>
           </div>
         </div>
-      </div>
+        </div>
       </div>
     </div>
   );
