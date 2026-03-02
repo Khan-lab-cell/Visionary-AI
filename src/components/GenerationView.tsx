@@ -104,41 +104,49 @@ export const GenerationView: React.FC<GenerationViewProps> = ({ type, subType, o
         });
       }, 1000);
 
-      // 3. API Call or Mock Simulation
-      const apiUrl = import.meta.env.VITE_API_URL;
+      // 3. API Call
+      let apiUrl = import.meta.env.VITE_API_URL;
       let finalUrl = '';
 
-      if (apiUrl && apiUrl !== 'https://your-fastapi-url.com') {
-        const formData = new FormData();
-        formData.append('prompt', finalPrompt);
-        formData.append('duration', duration);
-        formData.append('resolution', resolution);
-        formData.append('type', type);
-        formData.append('subType', subType || '');
-        formData.append('user_id', user.id);
-        
-        if (uploadedFile) {
-          formData.append('file', uploadedFile);
-        }
+      if (!apiUrl || apiUrl === 'https://your-fastapi-url.com') {
+        throw new Error('API URL is not configured. Please set VITE_API_URL in your environment.');
+      }
 
-        const response = await fetch(`${apiUrl}/api/generate`, {
-          method: 'POST',
-          body: formData,
-        });
+      // Ensure apiUrl has a protocol to prevent relative path issues
+      if (!apiUrl.startsWith('http')) {
+        apiUrl = `https://${apiUrl}`;
+      }
+      
+      // Remove trailing slash if exists
+      apiUrl = apiUrl.replace(/\/$/, '');
 
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.detail || 'Generation failed on backend');
-        }
+      const formData = new FormData();
+      formData.append('prompt', finalPrompt);
+      formData.append('duration', duration);
+      formData.append('resolution', resolution);
+      formData.append('type', type);
+      formData.append('subType', subType || '');
+      formData.append('user_id', user.id);
+      
+      if (uploadedFile) {
+        formData.append('file', uploadedFile);
+      }
 
-        const data = await response.json();
-        finalUrl = data.url;
-      } else {
-        // Simulation mode for demo/development
-        await new Promise(resolve => setTimeout(resolve, 5000)); // Simulate extra processing time
-        finalUrl = type === 'video' 
-          ? 'https://cdn.pixabay.com/video/2023/10/20/185848-876610237_tiny.mp4'
-          : `https://picsum.photos/seed/${Math.random()}/1920/1080`;
+      const response = await fetch(`${apiUrl}/api/generate`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || 'Generation failed on backend');
+      }
+
+      const data = await response.json();
+      finalUrl = data.url;
+      
+      if (!finalUrl) {
+        throw new Error('Backend did not return a valid URL');
       }
       
       clearInterval(interval);
