@@ -1,0 +1,6 @@
+{
+  "3": { "inputs": { "seed": 0 }, "class_type": "KSampler" },
+  "5": { "inputs": { "width": 512, "height": 512 }, "class_type": "EmptyLatentImage" },
+  "6": { "inputs": { "text": "REPLACE_ME" }, "class_type": "CLIPTextEncode" },
+  "9": { "inputs": { "images": ["8", 0] }, "class_type": "SaveImage" }
+}

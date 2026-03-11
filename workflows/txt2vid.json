@@ -1,0 +1,6 @@
+{
+  "3": { "inputs": { "seed": 0 }, "class_type": "KSampler" },
+  "5": { "inputs": { "width": 512, "height": 512 }, "class_type": "EmptyLatentImage" },
+  "6": { "inputs": { "text": "REPLACE_ME" }, "class_type": "CLIPTextEncode" },
+  "duration_node_id": { "inputs": { "frame_count": 24 }, "class_type": "VHS_VideoCombine" }
+}

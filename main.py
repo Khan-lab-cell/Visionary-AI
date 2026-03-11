@@ -2,15 +2,29 @@ import json
 import uuid
 import urllib.request
 import urllib.parse
-import websocket # websocket-client
-from fastapi import FastAPI, Form, UploadFile, File, HTTPException
+import websocket
+import asyncio
+from fastapi import FastAPI, Form, UploadFile, File, HTTPException, BackgroundTasks, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from typing import Optional
+from fastapi.staticfiles import StaticFiles
+from typing import Optional, Dict
 import os
+import time
+import random
+import logging
+import json
+import uuid
+import urllib.request
+import urllib.parse
+import websocket # This is the client for ComfyUI
+
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
-# Enable CORS for the React frontend
+# Enable CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -20,49 +34,151 @@ app.add_middleware(
 )
 
 COMFYUI_SERVER_ADDRESS = os.getenv("COMFYUI_URL", "127.0.0.1:8188")
-CLIENT_ID = str(uuid.uuid4())
+OUTPUT_DIR = "outputs"
+os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-def queue_prompt(prompt):
-    p = {"prompt": prompt, "client_id": CLIENT_ID}
-    data = json.dumps(p).encode('utf-8')
-    req = urllib.request.Request(f"http://{COMFYUI_SERVER_ADDRESS}/prompt", data=data)
-    return json.loads(urllib.request.urlopen(req).read())
+# --- NEW: WebSocket Route for Frontend ---
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket, clientId: Optional[str] = None):
+    await websocket.accept()
+    logger.info(f"Frontend connected via WebSocket. ClientID: {clientId}")
+    try:
+        while True:
+            # We just keep the connection alive. 
+            # You can later use this to send real progress to the frontend!
+            data = await websocket.receive_text()
+    except WebSocketDisconnect:
+        logger.info(f"Frontend disconnected. ClientID: {clientId}")
 
-def get_image(filename, subfolder, folder_type):
-    data = {"filename": filename, "subfolder": subfolder, "type": folder_type}
-    url_values = urllib.parse.urlencode(data)
-    with urllib.request.urlopen(f"http://{COMFYUI_SERVER_ADDRESS}/view?{url_values}") as response:
-        return response.read()
+# Job Queue
+job_queue = asyncio.Queue()
+job_results: Dict[str, dict] = {}
 
-def get_history(prompt_id):
-    with urllib.request.urlopen(f"http://{COMFYUI_SERVER_ADDRESS}/history/{prompt_id}") as response:
-        return json.loads(response.read())
+class ComfyUIClient:
+    def __init__(self, server_address):
+        self.server_address = server_address
+        self.client_id = str(uuid.uuid4())
 
-def get_images(ws, prompt):
-    prompt_id = queue_prompt(prompt)['prompt_id']
-    output_images = {}
+    def queue_prompt(self, prompt):
+        p = {"prompt": prompt, "client_id": self.client_id}
+        data = json.dumps(p).encode('utf-8')
+        req = urllib.request.Request(f"http://{self.server_address}/prompt", data=data)
+        return json.loads(urllib.request.urlopen(req).read())
+
+    def get_image(self, filename, subfolder, folder_type):
+        data = {"filename": filename, "subfolder": subfolder, "type": folder_type}
+        url_values = urllib.parse.urlencode(data)
+        with urllib.request.urlopen(f"http://{self.server_address}/view?{url_values}") as response:
+            return response.read()
+
+    def get_history(self, prompt_id):
+        with urllib.request.urlopen(f"http://{self.server_address}/history/{prompt_id}") as response:
+            return json.loads(response.read())
+
+    async def run_workflow(self, workflow):
+        ws = websocket.WebSocket()
+        ws.connect(f"ws://{self.server_address}/ws?clientId={self.client_id}")
+        
+        prompt_id = self.queue_prompt(workflow)['prompt_id']
+        logger.info(f"Queued prompt ID: {prompt_id}")
+        
+        while True:
+            out = ws.recv()
+            if isinstance(out, str):
+                message = json.loads(out)
+                if message['type'] == 'executing':
+                    data = message['data']
+                    if data['node'] is None and data['prompt_id'] == prompt_id:
+                        break
+            else:
+                continue
+        
+        ws.close()
+        history = self.get_history(prompt_id)[prompt_id]
+        
+        # Find the output node
+        for node_id in history['outputs']:
+            node_output = history['outputs'][node_id]
+            
+            # Check for Images
+            if 'images' in node_output:
+                image = node_output['images'][0]
+                return self.get_image(image['filename'], image['subfolder'], image['type']), "image/png"
+            
+            # Check for Videos/GIFs (VHS nodes often use 'gifs' or 'videos')
+            video_key = next((k for k in ['gifs', 'videos', 'images'] if k in node_output), None)
+            if video_key and (video_key != 'images' or node_output[video_key][0].get('format') == 'mp4'):
+                video = node_output[video_key][0]
+                mime = "video/mp4" if video.get('format') == 'mp4' else "image/gif"
+                return self.get_image(video['filename'], video['subfolder'], video['type']), mime
+        
+        return None, None
+
+comfy_client = ComfyUIClient(COMFYUI_SERVER_ADDRESS)
+
+async def worker():
+    logger.info("Worker started")
     while True:
-        out = ws.recv()
-        if isinstance(out, str):
-            message = json.loads(out)
-            if message['type'] == 'executing':
-                data = message['data']
-                if data['node'] is None and data['prompt_id'] == prompt_id:
-                    break #Execution is done
-        else:
-            continue #previews are binary data
+        job_id, job_data = await job_queue.get()
+        logger.info(f"Processing job {job_id}")
+        job_results[job_id] = {"status": "processing", "progress": 0}
+        
+        try:
+            # 1. Load Workflow
+            workflow_path = f"workflows/{job_data['workflow_file']}"
+            with open(workflow_path, "r") as f:
+                workflow = json.load(f)
 
-    history = get_history(prompt_id)[prompt_id]
-    for node_id in history['outputs']:
-        node_output = history['outputs'][node_id]
-        if 'images' in node_output:
-            images_output = []
-            for image in node_output['images']:
-                image_data = get_image(image['filename'], image['subfolder'], image['type'])
-                images_output.append(image_data)
-            output_images[node_id] = images_output
+            # 2. Map Frontend Data to Workflow Nodes
+            # NOTE: You MUST update these node IDs to match your specific JSON files!
+            
+            # Common mappings:
+            # Prompt Node (CLIP Text Encode)
+            if "6" in workflow: workflow["6"]["inputs"]["text"] = job_data['prompt']
+            
+            # Seed Node (KSampler)
+            if "3" in workflow: workflow["3"]["inputs"]["seed"] = random.randint(0, 10**15)
+            
+            # Resolution (Empty Latent Image)
+            if "5" in workflow:
+                res_map = {"480p": (640, 480), "720p": (1280, 720), "1080p": (1920, 1080)}
+                w, h = res_map.get(job_data['resolution'], (512, 512))
+                workflow["5"]["inputs"]["width"] = w
+                workflow["5"]["inputs"]["height"] = h
 
-    return output_images
+            # Duration (for video workflows)
+            if job_data['type'] == 'video' and "duration_node_id" in workflow:
+                # Example: mapping duration to frame count
+                dur_map = {"5s": 24, "10s": 48, "15s": 72, "20s": 96}
+                workflow["duration_node_id"]["inputs"]["frame_count"] = dur_map.get(job_data['duration'], 24)
+
+            # 3. Run Workflow
+            result_data, mime_type = await comfy_client.run_workflow(workflow)
+            
+            if result_data:
+                # Save to disk
+                ext = "mp4" if "video" in mime_type else "png"
+                filename = f"{job_id}.{ext}"
+                filepath = os.path.join(OUTPUT_DIR, filename)
+                with open(filepath, "wb") as f:
+                    f.write(result_data)
+                
+                # In production, return the public URL
+                # For ngrok/VPS, this would be your public IP or domain
+                public_url = f"https://{os.getenv('DOMAIN', 'your-vps-ip')}/outputs/{filename}"
+                job_results[job_id] = {"status": "completed", "url": public_url}
+            else:
+                job_results[job_id] = {"status": "failed", "error": "No output from ComfyUI"}
+
+        except Exception as e:
+            logger.error(f"Job {job_id} failed: {str(e)}")
+            job_results[job_id] = {"status": "failed", "error": str(e)}
+        
+        job_queue.task_done()
+
+@app.on_event("startup")
+async def startup_event():
+    asyncio.create_task(worker())
 
 @app.post("/api/generate")
 async def generate(
@@ -74,39 +190,47 @@ async def generate(
     user_id: str = Form(...),
     file: Optional[UploadFile] = File(None)
 ):
-    try:
-        # 1. Load the workflow
-        with open("workflow_api.json", "r") as f:
-            workflow = json.load(f)
+    job_id = str(uuid.uuid4())
+    
+    # Determine which workflow file to use
+    workflow_file = "image_gen.json"
+    if type == "video":
+        workflow_file = "txt2vid.json" if subType == "text-to-video" else "img2vid.json"
+    
+    job_data = {
+        "prompt": prompt,
+        "duration": duration,
+        "resolution": resolution,
+        "type": type,
+        "subType": subType,
+        "workflow_file": workflow_file
+    }
+    
+    # If file uploaded, save it for ComfyUI to use
+    if file:
+        input_path = f"inputs/{job_id}_{file.filename}"
+        os.makedirs("inputs", exist_ok=True)
+        with open(input_path, "wb") as f:
+            f.write(await file.read())
+        job_data["input_file"] = input_path
 
-        # 2. Update the workflow with the user's prompt
-        # Node "6" is the positive prompt in your JSON
-        workflow["6"]["inputs"]["text"] = prompt
-        
-        # Optionally update seed for variety
-        import random
-        workflow["3"]["inputs"]["seed"] = random.randint(0, 1125899906842624)
+    await job_queue.put((job_id, job_data))
+    job_results[job_id] = {"status": "queued"}
+    
+    # For simplicity in this beginner setup, we'll wait for the result
+    # In a real production app, you'd return the job_id and the frontend would poll
+    while job_results[job_id]["status"] in ["queued", "processing"]:
+        await asyncio.sleep(1)
+    
+    result = job_results[job_id]
+    if result["status"] == "failed":
+        raise HTTPException(status_code=500, detail=result["error"])
+    
+    return {"url": result["url"]}
 
-        # 3. Connect to ComfyUI via WebSocket
-        ws = websocket.WebSocket()
-        ws.connect(f"ws://{COMFYUI_SERVER_ADDRESS}/ws?clientId={CLIENT_ID}")
-
-        # 4. Run the workflow
-        images = get_images(ws, workflow)
-        ws.close()
-
-        # 5. Process results
-        # Assuming node "9" is the SaveImage node
-        if "9" in images and len(images["9"]) > 0:
-            # In a real app, you would upload this to S3/Supabase Storage
-            # For now, we'll return a placeholder or base64 (simplified)
-            # Here we just return a mock URL since we can't host the image easily in this snippet
-            return {"url": f"https://picsum.photos/seed/{random.random()}/1024/1024", "status": "success"}
-        
-        return {"status": "error", "message": "No images generated"}
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+# Serve output files
+from fastapi.staticfiles import StaticFiles
+app.mount("/outputs", StaticFiles(directory=OUTPUT_DIR), name="outputs")
 
 if __name__ == "__main__":
     import uvicorn
