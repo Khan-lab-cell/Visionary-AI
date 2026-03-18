@@ -18,7 +18,8 @@ import {
   Sparkles,
   Type,
   ShieldCheck,
-  Clock
+  Clock,
+  Download
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { GenerationView } from './GenerationView';
@@ -237,8 +238,9 @@ export const Dashboard = () => {
                   <button 
                     onClick={() => downloadProject(project.url, project.type)}
                     className="p-2 bg-white/20 hover:bg-white/40 rounded-full backdrop-blur-sm transition-colors"
+                    title="Download"
                   >
-                    <LogOut className="w-5 h-5 text-white rotate-90" /> {/* Using LogOut as a download icon placeholder or similar */}
+                    <Download className="w-5 h-5 text-white" />
                   </button>
                 </div>
               </div>
@@ -252,8 +254,9 @@ export const Dashboard = () => {
                   <button 
                     onClick={() => downloadProject(project.url, project.type)}
                     className="text-brand-primary hover:text-brand-secondary transition-colors"
+                    title="Download"
                   >
-                    <Plus className="w-4 h-4 rotate-45" /> {/* Using Plus rotated as a download hint or similar */}
+                    <Download className="w-4 h-4" />
                   </button>
                 </div>
               </div>
@@ -557,10 +560,11 @@ export const Dashboard = () => {
                           </div>
                           <button 
                             onClick={() => downloadProject(project.url, project.type)}
-                            className="p-2 text-slate-400 hover:text-brand-primary transition-colors"
+                            className="flex items-center gap-1 px-3 py-1.5 bg-brand-primary/10 text-brand-primary hover:bg-brand-primary hover:text-white rounded-lg transition-all text-xs font-bold"
                             title="Download"
                           >
-                            <Plus className="w-5 h-5 rotate-45" />
+                            <Download className="w-3.5 h-3.5" />
+                            Download
                           </button>
                         </div>
                       </div>
