@@ -154,21 +154,36 @@ export const GenerationView: React.FC<GenerationViewProps> = ({ type, subType, o
       setResult(finalUrl);
 
       // 4. Deduct Credits & Save Project
-      await supabase
-        .from('user_subscriptions')
-        .update({ credits_remaining: sub.credits_remaining - creditCost })
-        .eq('user_id', user.id);
+      try {
+        const { error: subError } = await supabase
+          .from('user_subscriptions')
+          .update({ credits_remaining: sub.credits_remaining - creditCost })
+          .eq('user_id', user.id);
 
-      await supabase
-        .from('projects')
-        .insert({
-          user_id: user.id,
-          type,
-          prompt: finalPrompt,
-          url: finalUrl,
-          thumbnail_url: finalUrl,
-          expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString() // 1 hour
-        });
+        if (subError) throw subError;
+
+        const { error: projectError } = await supabase
+          .from('projects')
+          .insert({
+            user_id: user.id,
+            type,
+            prompt: finalPrompt,
+            url: finalUrl,
+            thumbnail_url: finalUrl,
+            expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days instead of 1 hour
+          });
+
+        if (projectError) {
+          console.error('Error saving project:', projectError);
+          // We don't throw here because the user already has the result
+          // But we notify them in console
+          if (projectError.code === '42501') {
+            console.warn('Supabase RLS Policy missing for "projects" table. Please check your Supabase dashboard.');
+          }
+        }
+      } catch (err) {
+        console.error('Error updating credits/saving project:', err);
+      }
 
     } catch (err: any) {
       setError(err.message);
@@ -442,7 +457,17 @@ export const GenerationView: React.FC<GenerationViewProps> = ({ type, subType, o
                       )}
                     </div>
                     <div className="flex gap-3">
-                      <button className="flex-grow py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-medium transition-all flex items-center justify-center gap-2">
+                      <button 
+                        onClick={() => {
+                          const link = document.createElement('a');
+                          link.href = result;
+                          link.download = `generated-${Date.now()}.${type === 'video' ? 'mp4' : 'png'}`;
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                        }}
+                        className="flex-grow py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-medium transition-all flex items-center justify-center gap-2"
+                      >
                         <Download className="w-4 h-4" />
                         Download
                       </button>

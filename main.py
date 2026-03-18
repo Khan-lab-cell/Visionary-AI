@@ -4,19 +4,15 @@ import urllib.request
 import urllib.parse
 import websocket
 import asyncio
-from fastapi import FastAPI, Form, UploadFile, File, HTTPException, BackgroundTasks, WebSocket, WebSocketDisconnect
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from typing import Optional, Dict
 import os
 import time
 import random
 import logging
-import json
-import uuid
-import urllib.request
-import urllib.parse
-import websocket # This is the client for ComfyUI
+import requests # Added for Supabase uploads
+from fastapi import FastAPI, Form, UploadFile, File, HTTPException, BackgroundTasks, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from typing import Optional, Dict
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -36,6 +32,11 @@ app.add_middleware(
 COMFYUI_SERVER_ADDRESS = os.getenv("COMFYUI_URL", "127.0.0.1:8188")
 OUTPUT_DIR = "outputs"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+# Supabase Configuration (Set these on your VPS!)
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY") # Use Service Role Key for backend uploads
+BUCKET_NAME = "generated-content"
 
 # --- NEW: WebSocket Route for Frontend ---
 @app.websocket("/ws")
@@ -116,6 +117,32 @@ class ComfyUIClient:
 
 comfy_client = ComfyUIClient(COMFYUI_SERVER_ADDRESS)
 
+def upload_to_supabase(file_data, filename, mime_type):
+    if not SUPABASE_URL or not SUPABASE_KEY:
+        logger.warning("Supabase credentials not set. Returning local path.")
+        return None
+
+    try:
+        # 1. Upload to Supabase Storage
+        # Path: bucket/filename
+        url = f"{SUPABASE_URL}/storage/v1/object/{BUCKET_NAME}/{filename}"
+        headers = {
+            "Authorization": f"Bearer {SUPABASE_KEY}",
+            "Content-Type": mime_type,
+            "x-upsert": "true"
+        }
+        
+        response = requests.post(url, headers=headers, data=file_data)
+        if response.status_code == 200:
+            # 2. Return the public URL
+            return f"{SUPABASE_URL}/storage/v1/object/public/{BUCKET_NAME}/{filename}"
+        else:
+            logger.error(f"Supabase upload failed: {response.status_code} - {response.text}")
+            return None
+    except Exception as e:
+        logger.error(f"Error uploading to Supabase: {str(e)}")
+        return None
+
 async def worker():
     logger.info("Worker started")
     while True:
@@ -156,16 +183,22 @@ async def worker():
             result_data, mime_type = await comfy_client.run_workflow(workflow)
             
             if result_data:
-                # Save to disk
                 ext = "mp4" if "video" in mime_type else "png"
                 filename = f"{job_id}.{ext}"
-                filepath = os.path.join(OUTPUT_DIR, filename)
-                with open(filepath, "wb") as f:
-                    f.write(result_data)
                 
-                # In production, return the public URL
-                # For ngrok/VPS, this would be your public IP or domain
-                public_url = f"https://{os.getenv('DOMAIN', 'your-vps-ip')}/outputs/{filename}"
+                # Try to upload to Supabase first
+                public_url = upload_to_supabase(result_data, filename, mime_type)
+                
+                if not public_url:
+                    # Fallback to local file if Supabase fails or credentials missing
+                    filepath = os.path.join(OUTPUT_DIR, filename)
+                    with open(filepath, "wb") as f:
+                        f.write(result_data)
+                    
+                    # For ngrok/VPS, this would be your public IP or domain
+                    domain = os.getenv('DOMAIN', 'your-vps-ip')
+                    public_url = f"https://{domain}/outputs/{filename}"
+                
                 job_results[job_id] = {"status": "completed", "url": public_url}
             else:
                 job_results[job_id] = {"status": "failed", "error": "No output from ComfyUI"}
