@@ -23,9 +23,10 @@ interface GenerationViewProps {
   subType?: 'text-to-video' | 'image-to-video';
   onBack: () => void;
   onGoToPlans: () => void;
+  onRefresh?: () => void;
 }
 
-export const GenerationView: React.FC<GenerationViewProps> = ({ type, subType, onBack, onGoToPlans }) => {
+export const GenerationView: React.FC<GenerationViewProps> = ({ type, subType, onBack, onGoToPlans, onRefresh }) => {
   const [prompt, setPrompt] = useState('');
   const [subscription, setSubscription] = useState<any>(null);
   const [duration, setDuration] = useState('5s');
@@ -170,17 +171,18 @@ export const GenerationView: React.FC<GenerationViewProps> = ({ type, subType, o
             prompt: finalPrompt,
             url: finalUrl,
             thumbnail_url: finalUrl,
-            expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days instead of 1 hour
+            expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString() // 1 hour
           });
 
         if (projectError) {
           console.error('Error saving project:', projectError);
-          // We don't throw here because the user already has the result
-          // But we notify them in console
           if (projectError.code === '42501') {
             console.warn('Supabase RLS Policy missing for "projects" table. Please check your Supabase dashboard.');
           }
         }
+        
+        // Trigger dashboard refresh
+        if (onRefresh) onRefresh();
       } catch (err) {
         console.error('Error updating credits/saving project:', err);
       }
@@ -458,13 +460,23 @@ export const GenerationView: React.FC<GenerationViewProps> = ({ type, subType, o
                     </div>
                     <div className="flex gap-3">
                       <button 
-                        onClick={() => {
-                          const link = document.createElement('a');
-                          link.href = result;
-                          link.download = `generated-${Date.now()}.${type === 'video' ? 'mp4' : 'png'}`;
-                          document.body.appendChild(link);
-                          link.click();
-                          document.body.removeChild(link);
+                        onClick={async () => {
+                          try {
+                            const response = await fetch(result);
+                            const blob = await response.blob();
+                            const url = window.URL.createObjectURL(blob);
+                            const link = document.createElement('a');
+                            link.href = url;
+                            link.download = `generated-${Date.now()}.${type === 'video' ? 'mp4' : 'png'}`;
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                            window.URL.revokeObjectURL(url);
+                          } catch (err) {
+                            console.error('Download failed:', err);
+                            // Fallback to opening in new tab if blob fetch fails
+                            window.open(result, '_blank');
+                          }
                         }}
                         className="flex-grow py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-medium transition-all flex items-center justify-center gap-2"
                       >

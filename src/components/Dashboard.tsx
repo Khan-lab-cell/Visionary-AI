@@ -36,42 +36,43 @@ export const Dashboard = () => {
   const [videoSubType, setVideoSubType] = useState<'text-to-video' | 'image-to-video' | undefined>();
   const navigate = useNavigate();
 
+  const fetchData = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    setUser(user);
+
+    // Fetch Profile
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+    setProfile(profileData);
+
+    // Fetch Subscription
+    const { data: subData } = await supabase
+      .from('user_subscriptions')
+      .select('*, plans(*)')
+      .eq('user_id', user.id)
+      .single();
+    setSubscription(subData);
+
+    // Fetch Projects (only non-expired)
+    const { data: projectData } = await supabase
+      .from('projects')
+      .select('*')
+      .eq('user_id', user.id)
+      .gt('expires_at', new Date().toISOString())
+      .order('created_at', { ascending: false });
+    setProjects(projectData || []);
+
+    setLoading(false);
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        navigate('/login');
-        return;
-      }
-      setUser(user);
-
-      // Fetch Profile
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-      setProfile(profileData);
-
-      // Fetch Subscription
-      const { data: subData } = await supabase
-        .from('user_subscriptions')
-        .select('*, plans(*)')
-        .eq('user_id', user.id)
-        .single();
-      setSubscription(subData);
-
-      // Fetch Projects (only non-expired)
-      const { data: projectData } = await supabase
-        .from('projects')
-        .select('*')
-        .eq('user_id', user.id)
-        .gt('expires_at', new Date().toISOString())
-        .order('created_at', { ascending: false });
-      setProjects(projectData || []);
-
-      setLoading(false);
-    };
     fetchData();
   }, [navigate]);
 
@@ -113,6 +114,24 @@ export const Dashboard = () => {
     { id: 'image', label: 'Generate Image', icon: <ImageIcon className="w-8 h-8" />, color: 'from-brand-blue to-brand-primary' },
     { id: 'history', label: 'Projects History', icon: <History className="w-8 h-8" />, color: 'from-slate-400 to-slate-500' },
   ];
+
+  const downloadProject = async (url: string, type: string) => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `project-${Date.now()}.${type === 'video' ? 'mp4' : 'png'}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      console.error('Download failed:', err);
+      window.open(url, '_blank');
+    }
+  };
 
   const renderMainView = () => (
     <>
@@ -200,23 +219,42 @@ export const Dashboard = () => {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {projects.length > 0 ? projects.slice(0, 4).map((project) => (
-            <div key={project.id} className="glass-card overflow-hidden border-slate-200 group cursor-pointer shadow-sm">
-              <div className="aspect-video relative">
+            <div key={project.id} className="glass-card overflow-hidden border-slate-200 group relative shadow-sm">
+              <div className="aspect-video relative overflow-hidden">
                 <img
                   src={project.thumbnail_url || project.url}
                   alt={project.prompt}
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                   referrerPolicy="no-referrer"
                 />
-                <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                  <ArrowRight className="w-8 h-8 text-white" />
+                <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                  <button 
+                    onClick={() => window.open(project.url, '_blank')}
+                    className="p-2 bg-white/20 hover:bg-white/40 rounded-full backdrop-blur-sm transition-colors"
+                  >
+                    <ArrowRight className="w-5 h-5 text-white" />
+                  </button>
+                  <button 
+                    onClick={() => downloadProject(project.url, project.type)}
+                    className="p-2 bg-white/20 hover:bg-white/40 rounded-full backdrop-blur-sm transition-colors"
+                  >
+                    <LogOut className="w-5 h-5 text-white rotate-90" /> {/* Using LogOut as a download icon placeholder or similar */}
+                  </button>
                 </div>
               </div>
               <div className="p-4">
                 <h4 className="font-bold text-slate-900 text-sm mb-1 truncate">{project.prompt || 'Untitled Project'}</h4>
-                <div className="flex items-center gap-2 text-[10px] text-slate-500">
-                  <Clock className="w-3 h-3" />
-                  Expires in {Math.round((new Date(project.expires_at).getTime() - Date.now()) / 60000)}m
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-[10px] text-slate-500">
+                    <Clock className="w-3 h-3" />
+                    {Math.max(0, Math.round((new Date(project.expires_at).getTime() - Date.now()) / 60000))}m left
+                  </div>
+                  <button 
+                    onClick={() => downloadProject(project.url, project.type)}
+                    className="text-brand-primary hover:text-brand-secondary transition-colors"
+                  >
+                    <Plus className="w-4 h-4 rotate-45" /> {/* Using Plus rotated as a download hint or similar */}
+                  </button>
                 </div>
               </div>
             </div>
@@ -479,6 +517,7 @@ export const Dashboard = () => {
                 subType={videoSubType} 
                 onBack={() => setCurrentView('video-select')} 
                 onGoToPlans={() => setCurrentView('plans')}
+                onRefresh={fetchData}
               />
             )}
             {currentView === 'image-gen' && (
@@ -486,6 +525,7 @@ export const Dashboard = () => {
                 type="image" 
                 onBack={() => setCurrentView('main')} 
                 onGoToPlans={() => setCurrentView('plans')}
+                onRefresh={fetchData}
               />
             )}
             {currentView === 'admin' && <AdminPanel />}
@@ -501,18 +541,27 @@ export const Dashboard = () => {
                 <h1 className="text-3xl font-bold text-slate-900 mb-8">Projects History</h1>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {projects.length > 0 ? projects.map((project) => (
-                    <div key={project.id} className="glass-card p-4 border-slate-200 flex gap-4 shadow-sm">
-                      <div className="w-32 aspect-video rounded-lg overflow-hidden bg-slate-100">
+                    <div key={project.id} className="glass-card p-4 border-slate-200 flex gap-4 shadow-sm group relative">
+                      <div className="w-32 aspect-video rounded-lg overflow-hidden bg-slate-100 flex-shrink-0">
                         <img src={project.thumbnail_url || project.url} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                       </div>
-                      <div className="flex flex-col justify-center">
-                        <h4 className="text-slate-900 font-bold truncate w-32">{project.prompt || 'Untitled'}</h4>
+                      <div className="flex flex-col justify-center flex-grow min-w-0">
+                        <h4 className="text-slate-900 font-bold truncate">{project.prompt || 'Untitled'}</h4>
                         <p className="text-slate-500 text-sm">Generated {new Date(project.created_at).toLocaleDateString()}</p>
-                        <div className="mt-2 flex gap-2">
-                          <span className="px-2 py-0.5 bg-brand-primary/10 text-brand-primary text-[10px] font-bold rounded uppercase">{project.type}</span>
-                          <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-[10px] font-bold rounded uppercase">
-                            {Math.round((new Date(project.expires_at).getTime() - Date.now()) / 60000)}m left
-                          </span>
+                        <div className="mt-2 flex items-center justify-between">
+                          <div className="flex gap-2">
+                            <span className="px-2 py-0.5 bg-brand-primary/10 text-brand-primary text-[10px] font-bold rounded uppercase">{project.type}</span>
+                            <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-[10px] font-bold rounded uppercase">
+                              {Math.max(0, Math.round((new Date(project.expires_at).getTime() - Date.now()) / 60000))}m left
+                            </span>
+                          </div>
+                          <button 
+                            onClick={() => downloadProject(project.url, project.type)}
+                            className="p-2 text-slate-400 hover:text-brand-primary transition-colors"
+                            title="Download"
+                          >
+                            <Plus className="w-5 h-5 rotate-45" />
+                          </button>
                         </div>
                       </div>
                     </div>

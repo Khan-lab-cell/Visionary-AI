@@ -9,6 +9,8 @@ import time
 import random
 import logging
 import requests # Added for Supabase uploads
+import shutil # Added for file operations
+import asyncio
 from fastapi import FastAPI, Form, UploadFile, File, HTTPException, BackgroundTasks, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -196,7 +198,7 @@ async def worker():
                         f.write(result_data)
                     
                     # For ngrok/VPS, this would be your public IP or domain
-                    domain = os.getenv('DOMAIN', 'your-vps-ip')
+                    domain = os.getenv('DOMAIN', 'mite-next-grouper.ngrok-free.app')
                     public_url = f"https://{domain}/outputs/{filename}"
                 
                 job_results[job_id] = {"status": "completed", "url": public_url}
@@ -209,9 +211,40 @@ async def worker():
         
         job_queue.task_done()
 
+async def cleanup_task():
+    """Periodically deletes local files older than 1 hour."""
+    while True:
+        try:
+            logger.info("Running cleanup task...")
+            now = time.time()
+            one_hour_ago = now - 3600
+            
+            if os.path.exists(OUTPUT_DIR):
+                for filename in os.listdir(OUTPUT_DIR):
+                    file_path = os.path.join(OUTPUT_DIR, filename)
+                    if os.path.isfile(file_path):
+                        if os.path.getmtime(file_path) < one_hour_ago:
+                            os.remove(file_path)
+                            logger.info(f"Deleted expired local file: {filename}")
+            
+            # Also clean up inputs folder
+            if os.path.exists("inputs"):
+                for filename in os.listdir("inputs"):
+                    file_path = os.path.join("inputs", filename)
+                    if os.path.isfile(file_path):
+                        if os.path.getmtime(file_path) < one_hour_ago:
+                            os.remove(file_path)
+                            logger.info(f"Deleted expired input file: {filename}")
+                            
+        except Exception as e:
+            logger.error(f"Error in cleanup task: {str(e)}")
+            
+        await asyncio.sleep(600) # Run every 10 minutes
+
 @app.on_event("startup")
 async def startup_event():
     asyncio.create_task(worker())
+    asyncio.create_task(cleanup_task())
 
 @app.post("/api/generate")
 async def generate(
